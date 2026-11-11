@@ -447,20 +447,22 @@ On the second, how to measure the stock's one-day risk, the innovation distribut
 
 For risk management in junior resource stocks more generally, the results suggest three checks before a VaR model is trusted: whether apparent return predictability survives the bid--ask spread, whether the two tails have been examined separately, and whether the model has been tested on data it has not seen.
 
-% ------------------------------------------------------------------ disclosure
-\clearpage
-\section*{Statement of contributions}
-{\small The empirical work on which this paper is based was carried out during the internship by Dr.\ Roman Mestre and me together. He taught me the concepts and methods, and we jointly collected and cleaned the data and estimated the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations. I wrote the paper, both the first version (December 2025) and this revision. Dr.\ Mestre did not take part in writing either version.\par}
-
-\section*{Declaration of generative AI use}
-{\small The first version of this paper (December 2025) and the empirical work described above, including the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations, predate this revision. In this revision I used Claude (Anthropic) to re-estimate the models in Python and to extend the analysis, including the skewed Student-$t$ and Poisson jump models; to produce figures and tables; and to help draft the text. I take full responsibility for the content of this paper, and all errors are my own.\par}
-
 % ------------------------------------------------------------------ refs
+\clearpage
 \phantomsection\addcontentsline{toc}{section}{References}
 \bibliographystyle{apalike}
 \bibliography{refs}
 
+
+% ------------------------------------------------------------------ disclosure
+\section*{Statement of contributions}
+{\small The empirical work on which this paper is based was carried out during the internship by Dr.\ Roman Mestre and me together. He taught me the concepts and methods, and we jointly collected and cleaned the data and estimated the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations. I wrote the paper, both the first version (December 2025) and this revision. Dr.\ Mestre did not take part in writing either version.\par}
+
+\section*{Declaration of generative AI use}
+{\small The first version of this paper (December 2025) and the empirical work described above, including the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations, predate this revision. In this revision I used Claude (Anthropic) to extend the analysis, including the skewed Student-$t$ and Poisson jump models; to produce figures and tables; and to help draft text. I take full responsibility for the content of this paper, and all errors are my own.\par}
+
 % ------------------------------------------------------------------ appendix
+\clearpage
 \phantomsection\addcontentsline{toc}{section}{Appendix}
 \addtocontents{toc}{\protect\setcounter{tocdepth}{0}}
 \appendix
