@@ -1,0 +1,9 @@
+*.aux
+*.log
+*.out
+*.blg
+*.bbl
+__pycache__/
+*.pgf
+data/*.csv
+results/*.csv

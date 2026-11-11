@@ -1,0 +1,516 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[final]{microtype}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage[font=small,labelfont=bf,labelsep=period,skip=6pt]{caption}
+\usepackage[round,authoryear]{natbib}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[bottom,hang,flushmargin]{footmisc}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=linkblue,citecolor=linkblue,urlcolor=linkblue]{hyperref}
+
+\definecolor{linkblue}{HTML}{1F4E8C}
+\hypersetup{pdftitle={An Empirical Study in Junior Mining Stock Risk Management: Weak-Form Efficiency Tests and Value-at-Risk Estimation with GARCH Models},pdfauthor={Mael Tok}}
+\setstretch{1.12}
+\setlength{\parskip}{0pt}
+\setlength{\footnotemargin}{1.2em}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.8em}{}
+\titlespacing*{\section}{0pt}{1.4\baselineskip}{0.5\baselineskip}
+\titlespacing*{\subsection}{0pt}{1.0\baselineskip}{0.35\baselineskip}
+\setlist{itemsep=2pt,topsep=4pt}
+\bibpunct{(}{)}{;}{a}{}{,}
+\setlength{\bibsep}{3pt}
+\setlength{\abovedisplayskip}{7pt plus 2pt minus 3pt}
+\setlength{\belowdisplayskip}{7pt plus 2pt minus 3pt}
+\frenchspacing
+\setcounter{tocdepth}{2}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\VR}{\mathrm{VR}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\tabnote}[1]{\par\vspace{5pt}\begin{minipage}{\linewidth}\setstretch{1.0}\footnotesize\textit{Notes:} #1\end{minipage}}
+
+\input{numbers.tex}
+
+\begin{document}
+
+% ------------------------------------------------------------------ title page
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\setstretch{1.1}
+\vspace*{1.2cm}
+\begin{center}
+{\LARGE\bfseries An Empirical Study in Junior Mining Stock\\[4pt] Risk Management\par}
+\vspace{0.45cm}
+{\Large Weak-Form Efficiency Tests and Value-at-Risk Estimation\\[2pt] with GARCH Models\par}
+\vspace{1.1cm}
+{\large Mael Tok\footnote{This paper originated in a voluntary research internship at the Faculty of Economics of the University of Montpellier in June 2025, supervised by Dr.\ Roman Mestre. He taught me the methods used here, and the empirical work on which the paper is based was carried out jointly with him; see the statement of contributions at the end of the paper. I thank him for his guidance. The paper was revised and extended in 2026, while I was an undergraduate student at McGill University. Code: \url{https://github.com/2008MT/aru-garch-var}.}}\\[4pt]
+{\normalsize McGill University}\\[0.9cm]
+{\normalsize This version: November 2026\\ First version: December 2025}
+\end{center}
+\vspace{1.0cm}
+
+\begin{center}\textbf{Abstract}\end{center}
+\vspace{-2pt}
+\begin{quote}
+\setstretch{1.1}\small
+This paper studies the daily risk of Arafura Rare Earths (ASX:\ ARU), a pre-production rare-earth developer, between August 2018 and June 2025. I first ask whether its returns are predictable. They show a negative first-order autocorrelation of \rhoOne{} that remains significant under heteroskedasticity-robust inference, but its size is what bid--ask bounce on a coarse price grid would produce (the minimum price step is on average \tickMean\% of the share price), and a contrarian trading rule built on it loses money once a one-tick spread is paid. I therefore find no exploitable departure from weak-form efficiency. What is predictable is risk. I fit AR(1)--GARCH and EGARCH models with Normal, Student-$t$ and skewed-$t$ innovations, and a GARCH model with Poisson jumps, and evaluate their one-day Value-at-Risk forecasts out of sample for long and short positions. The decisive modelling choice is the shape of the innovation distribution rather than the volatility recursion. Tails are heavy ($\hat\nu\approx 4$) and asymmetric, with the largest moves on the upside: Gaussian models understate the short seller's risk, symmetric Student-$t$ models overstate the long holder's, and the skewed-$t$ and jump models are correctly calibrated in both tails.
+\end{quote}
+\vspace{0.5cm}
+\noindent{\small\textbf{Keywords:} market efficiency, bid--ask bounce, tick size, GARCH, EGARCH, skewed Student-$t$, Poisson jumps, Value-at-Risk, backtesting, rare earths.}\\[3pt]
+\noindent{\small\textbf{JEL classification:} C22, C58, G14, G32.}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+\setcounter{footnote}{0}
+\pagenumbering{roman}
+{\setstretch{1.05}\hypersetup{linkcolor=black}\tableofcontents}
+\clearpage
+\pagenumbering{arabic}
+
+% ------------------------------------------------------------------ 1
+\section{Introduction}
+
+Neodymium and praseodymium (NdPr) are the rare-earth elements used in the permanent magnets of electric-vehicle motors and wind turbines. Arafura Rare Earths Ltd (ASX:\ ARU) is developing the Nolans NdPr project in Australia's Northern Territory, with a design capacity of 4,440 tonnes of NdPr oxide a year and a capital cost to first production estimated at about A\$1.7 billion.\footnote{Figures from \citet{arafura2023}.} The company is not yet in production. Its share price is in effect a claim on a project that is not yet financed or built, so it reacts to commodity prices, to geopolitics, and above all to financing news. Over the sample studied here the stock traded between A\$\priceMin{} and A\$\priceMax{}, with an annualised volatility of about \aruAnnVol\%, roughly five times that of the Australian market index.
+
+This paper asks two questions about that risk. The first is whether the stock's daily return can be predicted from its own past, which is the question of weak-form efficiency \citep{fama1970}. The second is how well standard conditional-volatility models forecast the one-day Value-at-Risk (VaR) of a position in the stock, and which modelling choices matter for that forecast.
+
+The two questions are sometimes linked by the argument that a risk model built on past returns is only justified if the market is \emph{in}efficient. Separating them is the organising idea of the paper. Weak-form efficiency restricts the conditional \emph{mean} of returns: past prices should not help to forecast future returns beyond a fair compensation for risk. It places no restriction on the conditional variance or on the shape of the return distribution. Volatility clustering and fat tails are found in almost every financial return series \citep{cont2001}, including those of markets nobody regards as inefficient. A VaR model exploits predictability in \emph{risk}, which is compatible with an efficient market.
+
+The main findings are three.
+
+\begin{enumerate}[leftmargin=1.4em]
+\item \emph{The return is serially correlated, but not exploitably so.} The first-order autocorrelation of daily returns is \rhoOne{} and is statistically significant. Its source is the trading mechanism: the minimum price step is on average \tickMean\% of the share price, and closing prices that alternate between buyer-initiated and seller-initiated trades produce exactly this pattern \citep{roll1984}. A trading rule that bets on the reversal earns \conGross\% a day before costs and loses \conLoss\% a day after them.
+\item \emph{Risk is predictable, and its shape matters more than its dynamics.} The largest gain in fit comes from the innovation distribution. Tails are heavy, with about four degrees of freedom, and asymmetric: large moves are mostly upward, as on 14 March 2024, when the share price rose 79\% in a day after the Australian Government announced an A\$840 million funding package for Nolans.\footnote{See \citet{miningweekly2024}. The corresponding log-return is 58\%.} A skewed Student-$t$ distribution \citep{hansen1994} is preferred to the symmetric one, and a Poisson jump model estimates that four in five of the stock's jumps are upward.
+\item \emph{Out of sample, the tail asymmetry decides which VaR models work.} Over \oosN{} one-day forecasts, Gaussian models produce about twice the expected number of 1\% violations for a short position while being too conservative for a long one. Symmetric Student-$t$ models fix the first problem and worsen the second. Skewed-$t$ and jump models pass every coverage test. So does plain historical simulation: for this stock, volatility dynamics add little once the shape of the distribution is right.
+\end{enumerate}
+
+The paper is a case study of a single stock, and its conclusions should not be generalised without evidence from other junior resource companies. Section~\ref{sec:data} describes the data. Section~\ref{sec:eff} examines return predictability. Section~\ref{sec:vol} presents and estimates the volatility models, Section~\ref{sec:var} evaluates their VaR forecasts, Section~\ref{sec:disc} discusses limitations, and Section~\ref{sec:concl} concludes.
+
+% ------------------------------------------------------------------ 2
+\section{Data}\label{sec:data}
+
+\subsection{Sample and returns}
+
+The data are daily closing prices of ARU and of the All Ordinaries index (XAO), the broad Australian equity benchmark, from 15 August 2018 to 16 June 2025, extracted from the market-data terminal of the trading room of the Faculty of Economics, University of Montpellier. Returns are continuously compounded and expressed in per cent,
+\begin{equation}
+r_t = 100\,\ln\!\left(\frac{P_t}{P_{t-1}}\right),
+\end{equation}
+where $P_t$ is the closing price on day $t$. Arafura paid no dividends during the period. The risk-free rate used in excess returns is the daily Treasury-bill return from Kenneth French's data library; at the daily frequency it is of the order of 0.01\% and has no material effect on any result.
+
+Days on which the extract contained no ARU close were filled with the previous close. Two such gaps are long: 25 trading days from 17 March to 22 April 2022, and 10 from 7 to 20 October 2022. Carrying a price forward over several weeks produces a run of zero returns followed by one artificial return that covers the whole gap, so the returns inside these two windows and the first return after each are excluded. This removes \nStale{} of \nRet{} daily returns and leaves \nUsed{} observations.\footnote{No conclusion depends on the exclusion. With all \rawN{} returns the first-order autocorrelation is \rawRhoOne{} (robust $t$-statistic \rawRhoOneTrob), the ranking of the volatility models is unchanged, and the preferred model still passes the coverage tests. Outside the two windows, runs of unchanged closes have the lengths expected of independent zero returns (210 of length one, 61 of two, 16 of three, 5 of four and 4 of five).}
+
+\subsection{Descriptive statistics}
+
+\begin{table}[t]
+\centering
+\caption{Descriptive statistics of daily log-returns}\label{tab:desc}
+\small
+\input{tables/tab_desc.tex}
+\tabnote{Daily log-returns in per cent, 16 August 2018 to 16 June 2025. ARU is Arafura Rare Earths; XAO is the All Ordinaries index. The market-model residual is $\hat\varepsilon_t$ from equation~\eqref{eq:mm}. Annualised volatility is the daily standard deviation multiplied by $\sqrt{252}$. Kurtosis is not in excess of three (a Normal distribution has kurtosis 3). The Jarque--Bera statistic is $\chi^2(2)$ under normality (5\% critical value 5.99).}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_price_returns.pdf}
+\caption{ARU closing price and daily log-returns, August 2018 to June 2025. Grey bands mark the two filled gaps excluded from the analysis.}\label{fig:price}
+\end{figure}
+
+Table~\ref{tab:desc} summarises the return series and Figure~\ref{fig:price} plots them. ARU's daily standard deviation is \aruSD\%, against \xaoSD\% for the index. The distribution is far from Normal: kurtosis is \aruKurt{}, and the \citet{jarquebera1987} statistic rejects normality at any level. The skewness is positive (\aruSkew{}), the opposite of the index (\xaoSkew{}). The largest moves are upward: $+\aruMax\%$ on 14 March 2024, and a cluster of gains in May and June 2019, when Chinese restrictions on rare-earth exports were widely discussed during the US--China trade dispute. The largest fall is \aruMin\%. For a developer whose value depends on a few binary events, good news tends to arrive in single announcements.
+
+\subsection{The price grid}\label{sec:grid}
+
+A second feature of the data is less visible but matters for Section~\ref{sec:eff}. Share prices cannot take any value: the exchange fixes a minimum price step, or \emph{tick}. On the ASX the tick is A\$0.001 for shares priced below A\$0.10 and A\$0.005 for shares between A\$0.10 and A\$2.00. For most stocks a tick is a negligible fraction of the price. For ARU it is not. At a share price of A\$0.15 the nearest possible prices are A\$0.145 and A\$0.155, so the smallest change the price can record is 3.3\%.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_ticks.pdf}
+\caption{The price grid. Panel (a): one tick (the minimum price step) as a percentage of the closing price. The jumps between about 1\% and 5\% occur when the price crosses A\$0.10 and the tick changes from A\$0.001 to A\$0.005. Panel (b): distribution of the daily change in the closing price, measured in ticks.}\label{fig:ticks}
+\end{figure}
+
+Panel (a) of Figure~\ref{fig:ticks} shows the tick as a percentage of the price over the sample. It ranges from \tickMin\% to \tickMax\% and averages \tickMean\%, the same order of magnitude as the daily standard deviation of returns. Panel (b) shows the consequence. The closing price is unchanged on \tickZero\% of days and moves by exactly one tick on a further \tickOne\%; on \tickTwo\% of days it moves by two ticks or fewer. Daily returns are therefore drawn from a small set of discrete values, and a one-tick difference in where the last trade of the day happens to occur is a large return.
+
+% ------------------------------------------------------------------ 3
+\section{Is the return predictable?}\label{sec:eff}
+
+\subsection{What weak-form efficiency does and does not imply}
+
+Let $p_t=\ln P_t$. The random-walk hypothesis states that $p_t=\mu+p_{t-1}+\varepsilon_t$, so that the return is a constant plus an unpredictable shock. \citet{clm1997} distinguish versions of it by what is assumed about $\varepsilon_t$. In the strongest version the shocks are independent and identically distributed. In the weakest they are only required to be uncorrelated, $\Cov(\varepsilon_t,\varepsilon_{t-k})=0$ for all $k\neq 0$, which allows their variance to change over time. Weak-form efficiency in the sense of \citet{fama1970} corresponds to the weak version: past prices do not help to forecast the return. It is a statement about the conditional mean,
+\begin{equation}
+\E\!\left[\varepsilon_t \mid \varepsilon_{t-1},\varepsilon_{t-2},\dots\right]=0 ,
+\end{equation}
+and says nothing about the conditional variance $\Var(\varepsilon_t\mid\varepsilon_{t-1},\dots)$ or about normality.
+
+Three consequences follow. First, heteroskedasticity and fat tails, which Table~\ref{tab:desc} documents, are not evidence against efficiency. Second, the usual standard errors of autocorrelations assume independent shocks, so they are invalid under the hypothesis actually being tested, and inference has to be robust to changing variance. Third, following \citet{jensen1978}, a statistical rejection matters economically only if it can be turned into profit after trading costs.
+
+\subsection{Exposure to the market}
+
+Predictability should be assessed on the part of the return that is specific to the stock. I therefore estimate the market model in excess returns \citep{sharpe1964},
+\begin{equation}\label{eq:mm}
+r_t-r_{f,t}=\alpha+\beta\,(r_{m,t}-r_{f,t})+\varepsilon_t ,
+\end{equation}
+where $r_{m,t}$ is the return on the index and $r_{f,t}$ the risk-free rate. Beta measures the stock's sensitivity to the market, and alpha its average return beyond what that sensitivity explains. Estimation is by ordinary least squares with \citet{neweywest1987} standard errors, which allow for heteroskedasticity and autocorrelation in $\varepsilon_t$. The estimates are $\hat\beta=\capmBeta$ (standard error \capmBetaSE) and $\hat\alpha=\capmAlpha\%$ per day (standard error \capmAlphaSE). Beta is not statistically different from one and alpha is indistinguishable from zero. The $R^2$ is only \capmRsq\%: about \capmIdio\% of the variance of ARU's return is specific to the company. This is why the remainder of the paper models the return itself, and why the results below are nearly identical for $r_t$ and for the residual $\hat\varepsilon_t$.
+
+\subsection{Tests of serial dependence}
+
+The sample autocorrelation at lag $k$ measures how strongly today's return is related to the return $k$ days earlier,
+\begin{equation}
+\hat\rho_k=\frac{\sum_{t=k+1}^{T}(r_t-\bar r)(r_{t-k}-\bar r)}{\sum_{t=1}^{T}(r_t-\bar r)^2}.
+\end{equation}
+If returns are independent, $\hat\rho_k$ is approximately Normal with standard error $1/\sqrt{T}$, which gives the usual $t$-statistic $t_k=\sqrt{T}\hat\rho_k$. When volatility varies over time this standard error is too small, because the days that contribute most to $\hat\rho_k$ are the few days of extreme returns. \citet{lomackinlay1988} derive a standard error that remains valid in that case; the corresponding statistic is denoted $t^{*}_k$ (Appendix~\ref{app:tests}). Two joint tests complement the individual autocorrelations. The \citet{ljungbox1978} statistic tests whether the first $m$ autocorrelations are all zero,
+\begin{equation}
+Q_{\mathrm{LB}}(m)=T(T+2)\sum_{k=1}^{m}\frac{\hat\rho_k^{2}}{T-k}\;\sim\;\chi^2(m),
+\end{equation}
+and has a robust counterpart due to \citet{lobato2001}. The variance ratio of \citet{lomackinlay1988} compares the variance of $q$-day returns with $q$ times the variance of one-day returns,
+\begin{equation}
+\VR(q)=\frac{\Var(r_t+r_{t-1}+\dots+r_{t-q+1})}{q\,\Var(r_t)} .
+\end{equation}
+Under a random walk, variance grows in proportion to the horizon and $\VR(q)=1$. A value below one means that part of each day's move is subsequently reversed.
+
+\begin{table}[t]
+\centering
+\caption{Serial dependence in ARU returns}\label{tab:serial}
+\small
+\input{tables/tab_serial.tex}
+\tabnote{$T=\nUsed$. Panel A: sample autocorrelations; $t$ uses the standard error $1/\sqrt{T}$, valid under independence, and $t^{*}$ the heteroskedasticity-robust standard error. Panel B: Ljung--Box statistic with its $p$-value, and the $p$-value $p^{*}$ of the robust statistic. Panel C: variance ratios with overlapping $q$-day returns; $z$ and $z^{*}$ are the test statistics under homoskedasticity and heteroskedasticity (standard Normal under the random walk). Panel D: Ljung--Box statistic on squared demeaned series and the LM test of \citet{engle1982} with five lags.}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_acf.pdf}
+\caption{Sample autocorrelations of ARU daily returns and squared returns. Bars outside a band are significant at the 5\% level. The dashed band is $\pm1.96/\sqrt{T}$, valid under independence; the solid band in panel (a) uses heteroskedasticity-robust standard errors.}\label{fig:acf}
+\end{figure}
+
+Table~\ref{tab:serial} reports the results for returns and for market-model residuals, and Figure~\ref{fig:acf} plots the autocorrelations. The first-order autocorrelation is \rhoOne{} for returns and \rhoOneRes{} for residuals: a rise today tends to be followed by a small fall tomorrow, and conversely. Robust inference matters. The $t$-statistic at lag one falls from \rhoOneT{} to \rhoOneTrob{}, and the robust portmanteau $p$-values in Panel B are orders of magnitude larger than the Ljung--Box ones, although the test still rejects at ten lags. Beyond the first lag, only the seventh leaves the robust band ($\hat\rho_7=0.096$, $t^{*}=2.89$). I know of no mechanism that would produce a seven-day effect, and one exceedance among nineteen further lags is not surprising, so I treat it as noise. The systematic departure from the random walk is the reversal at the first lag.\footnote{The market index illustrates how misleading the conventional statistics can be. Its first-order autocorrelation over the same period is \xaoRhoOne{} with a conventional $t$-statistic of \xaoRhoOneT{}, but a robust $t$-statistic of only \xaoRhoOneTrob{}; the estimate is dominated by a few days of extreme volatility in March 2020.}
+
+The variance ratio is \vrTwo{} at two days ($z^{*}=\vrTwoZ$) and \vrFive{} at five days ($z^{*}=\vrFiveZ$), then stays near 0.81 at ten and twenty days. If the only departure from a random walk were a first-order autocorrelation $\rho_1$, the variance ratio would be $1+2\rho_1(q-1)/q$, that is 0.82, 0.80 and 0.79 at horizons of five, ten and twenty days. The estimates match this closely. There is no additional reversal beyond the first day, as there would be if prices overreacted to news and corrected slowly.
+
+Panel D confirms that squared returns are serially dependent: large moves tend to be followed by large moves of either sign. This is the predictability in risk that Sections~\ref{sec:vol} and~\ref{sec:var} use. It is weaker than might be expected: the Ljung--Box statistic on squared returns at ten lags is \qTwoTen{}, against \qTwoTenXao{} for the index over the same days.
+
+\subsection{Bid--ask bounce}
+
+A one-day reversal with no longer-horizon structure is the signature of measurement noise in the closing price. At any moment a stock has two prices: the \emph{ask}, at which one can buy, and the lower \emph{bid}, at which one can sell. Their difference is the spread. The closing price is the price of the last trade of the day, which is at the ask if that trade was a purchase and at the bid if it was a sale. Suppose the value of the stock does not change for two days, and the last trade is a purchase on the first day and a sale on the second. The recorded closing price falls by the spread although nothing has happened. A close at the ask can only be followed by an unchanged or lower recorded price, and a close at the bid by an unchanged or higher one, so recorded returns are negatively autocorrelated even when the true value follows a random walk.
+
+\citet{roll1984} formalises this. Let the observed log price be $p_t=m_t+\tfrac{s}{2}q_t$, where $m_t$ is the efficient price, which follows a random walk with shocks $u_t$, $s$ is the proportional spread, and $q_t=\pm1$ with equal probability according to whether the last trade is a purchase or a sale. Then $\Delta p_t=u_t+\tfrac{s}{2}(q_t-q_{t-1})$ and
+\begin{equation}
+\Cov(\Delta p_t,\Delta p_{t-1})=-\frac{s^{2}}{4}\qquad\Longrightarrow\qquad \hat s=2\sqrt{-\widehat{\Cov}(r_t,r_{t-1})} .
+\end{equation}
+Rounding prices to a grid has the same effect \citep{gottliebkalay1985,harris1990}. For ARU the implied spread is $\hat s=\rollSpread\%$. The smallest possible spread is one tick, on average \tickMean\% of the price (Section~\ref{sec:grid}), so the observed autocovariance corresponds to closing prices that are uncertain by about one and a half ticks. Nothing more than the trading mechanism is needed to explain it.
+
+\begin{table}[t]
+\centering
+\caption{First-order autocorrelation by tick-size regime}\label{tab:tick}
+\small
+\input{tables/tab_tick.tex}
+\tabnote{Days are classified by the previous day's closing price, which determines the tick. Mean tick/price is the average of the tick divided by the closing price. $\hat\rho_1$ is the correlation between $r_t$ and $r_{t-1}$ within each regime. The Roll spread is $2\sqrt{-\widehat{\Cov}(r_t,r_{t-1})}$.}
+\end{table}
+
+Table~\ref{tab:tick} provides a further check. If the autocorrelation comes from the grid, it should be stronger where the grid is coarser relative to the price. It is: when the stock trades below A\$0.10, where the tick averages \tickLow\% of the price, the autocorrelation is \rhoLow{}; at A\$0.10 and above, where the tick averages \tickHigh\%, it is \rhoHigh{}. The implied spread moves in proportion, from \rollLow\% to \rollHigh\%. With these sample sizes the difference between the two autocorrelations is not statistically significant on its own, but its direction is the one the bounce explanation predicts.
+
+\subsection{Can the reversal be traded?}
+
+The economic test of efficiency is whether the pattern yields a profit. The natural strategy is a \emph{contrarian rule}, which bets each day that yesterday's move will partly reverse. Let $w_t$ be the position held during day $t$, in units of the stock:
+\begin{equation}
+w_t=-\operatorname{sign}(r_{t-1})=
+\begin{cases}
++1 \ \text{(buy)} & \text{if the price fell yesterday,}\\
+\phantom{+}0 \ \text{(no position)} & \text{if it was unchanged,}\\
+-1 \ \text{(sell short)} & \text{if it rose.}
+\end{cases}
+\end{equation}
+The position is opened at yesterday's close and valued at today's, so its return before costs is $w_t r_t$. Over the sample this averages \conGross\% a day ($t$-statistic \conGrossT), which compounded over a year would be a very large return. It is not attainable, because trading is not free. A buyer pays the ask and a seller receives the bid, so each unit bought or sold costs half the spread relative to the mid-price. The spread cannot be smaller than one tick. Charging half a tick per unit traded, the cost on day $t$ is $|w_t-w_{t-1}|\times\tfrac{1}{2}(\text{tick}/P_{t-1})$. The rule changes its position by \conTurn{} units a day on average, and half a tick averages \conHalf\% of the price, so costs average \conCost\% a day. The return after costs is
+\begin{equation*}
+\underbrace{\conGross\%}_{\text{before costs}}-\underbrace{\conCost\%}_{\text{costs}}=\conNet\%\ \text{a day}\qquad(t\text{-statistic }{\conNetT}).
+\end{equation*}
+The rule would break even only if the half-spread were below \conBreakeven\%, a third of the minimum that the price grid allows. Even this comparison is generous to the rule: under the bounce explanation, the closing prices at which it appears to buy are bid prices and those at which it appears to sell are ask prices, and no trader can buy at the bid or sell at the ask.
+
+I conclude that ARU's returns reject the random walk statistically, but that the rejection reflects how prices are recorded and offers no profit. In the sense that matters economically, the evidence is consistent with weak-form efficiency.
+
+% ------------------------------------------------------------------ 4
+\section{Volatility models}\label{sec:vol}
+
+\subsection{Conditional mean and variance}
+
+The return is decomposed into a predictable mean and a shock whose standard deviation $\sigma_t$, the conditional volatility, depends on information available the day before:
+\begin{equation}\label{eq:mean}
+r_t=c+\phi\,r_{t-1}+\varepsilon_t,\qquad \varepsilon_t=\sigma_t z_t,\qquad z_t\sim\text{i.i.d. } D(0,1).
+\end{equation}
+The AR(1) term $\phi\,r_{t-1}$ absorbs the first-order reversal documented above. The standardised innovation $z_t$ has mean zero and variance one, and its distribution $D$ is discussed in Section~\ref{sec:dist}. Two specifications of $\sigma_t^2$ are compared.
+
+\emph{GARCH.} The GARCH(1,1) model of \citet{bollerslev1986}, which generalises the ARCH model of \citet{engle1982}, is
+\begin{equation}\label{eq:garch}
+\sigma_t^2=\omega+\alpha\,\varepsilon_{t-1}^2+\beta\,\sigma_{t-1}^2,\qquad \omega>0,\ \ \alpha\ge 0,\ \ \beta\ge 0 .
+\end{equation}
+Today's variance is a baseline $\omega$, plus a reaction $\alpha$ to the size of yesterday's shock, plus a fraction $\beta$ of yesterday's variance. A large shock of either sign raises volatility, and the effect decays gradually, which produces volatility clustering. If $\alpha+\beta<1$ the process is covariance stationary with long-run variance
+\begin{equation}
+\bar\sigma^2=\E[\sigma_t^2]=\frac{\omega}{1-\alpha-\beta},
+\end{equation}
+and the deviation of expected variance from $\bar\sigma^2$ shrinks by the factor $\alpha+\beta$ each day: $\E_t[\sigma_{t+k}^2]-\bar\sigma^2=(\alpha+\beta)^{k-1}(\sigma_{t+1}^2-\bar\sigma^2)$. The sum $\alpha+\beta$ is called the persistence, and the half-life of a volatility shock is $\ln 0.5/\ln(\alpha+\beta)$ days.
+
+\emph{EGARCH.} The exponential GARCH(1,1) of \citet{nelson1991} models the logarithm of the variance:
+\begin{equation}\label{eq:egarch}
+\ln\sigma_t^2=\omega+\alpha\left(|z_{t-1}|-\E|z_{t-1}|\right)+\gamma\,z_{t-1}+\beta\,\ln\sigma_{t-1}^2 .
+\end{equation}
+Because $\sigma_t^2=\exp(\cdot)$ is positive for any parameter values, no sign restrictions are needed, and persistence is measured by $\beta$ alone. The term in $\alpha$ is the response to the size of the shock, as in GARCH. The term in $\gamma$ is the response to its sign: a positive shock $z_{t-1}=+1$ changes $\ln\sigma_t^2$ by $\alpha(1-\E|z|)+\gamma$ and a negative shock $z_{t-1}=-1$ by $\alpha(1-\E|z|)-\gamma$. For equity indices $\gamma$ is typically negative, the leverage effect of \citet{black1976}: volatility rises more after falls than after gains.
+
+\subsection{Innovation distributions}\label{sec:dist}
+
+Three distributions are considered for $z_t$, each with mean zero and variance one.
+
+\emph{Normal.} The standard Normal density is
+\begin{equation}
+f_N(z)=\frac{1}{\sqrt{2\pi}}\exp\!\left(-\frac{z^{2}}{2}\right).
+\end{equation}
+Its tails decay very quickly: a move of more than four standard deviations has probability $6\times10^{-5}$, about one trading day in 60 years.
+
+\emph{Student-$t$.} Following \citet{bollerslev1987}, the Student-$t$ density with $\nu>2$ degrees of freedom, scaled to unit variance, is
+\begin{equation}\label{eq:t}
+f_t(z;\nu)=\frac{\Gamma\!\left(\frac{\nu+1}{2}\right)}{\sqrt{\pi(\nu-2)}\;\Gamma\!\left(\frac{\nu}{2}\right)}\left(1+\frac{z^{2}}{\nu-2}\right)^{-\frac{\nu+1}{2}} .
+\end{equation}
+Its tails decay as a power of $z$, so extreme moves are far more likely than under the Normal. The smaller $\nu$, the heavier the tails; as $\nu\to\infty$ the density converges to the Normal. The kurtosis is $3+6/(\nu-4)$ and is finite only for $\nu>4$.
+
+\emph{Skewed Student-$t$.} The density of \citet{hansen1994} adds a parameter $\lambda\in(-1,1)$ that makes one tail heavier than the other:
+\begin{equation}\label{eq:skt}
+f_{st}(z;\nu,\lambda)=
+bc\left[1+\frac{1}{\nu-2}\left(\frac{bz+a}{1+\operatorname{sign}(z+a/b)\,\lambda}\right)^{2}\right]^{-\frac{\nu+1}{2}},
+\end{equation}
+\begin{equation*}
+c=\frac{\Gamma\!\left(\frac{\nu+1}{2}\right)}{\sqrt{\pi(\nu-2)}\;\Gamma\!\left(\frac{\nu}{2}\right)},\qquad a=4\lambda c\,\frac{\nu-2}{\nu-1},\qquad b^{2}=1+3\lambda^{2}-a^{2}.
+\end{equation*}
+With $\lambda>0$ the right tail is heavier, with $\lambda<0$ the left, and $\lambda=0$ gives back the symmetric density~\eqref{eq:t}.
+
+\subsection{Estimation}
+
+Combining the two variance equations with the three distributions gives six models. Each is estimated by maximum likelihood: the parameters are chosen to make the observed returns as probable as possible under the model. Since $\varepsilon_t=\sigma_t z_t$, the density of $r_t$ given the past is $f_D(z_t)/\sigma_t$, and the log-likelihood of the sample is
+\begin{equation}\label{eq:ll}
+\ln L(\vartheta)=\sum_{t=2}^{T}\left[\ln f_D\!\left(\frac{\varepsilon_t}{\sigma_t}\right)-\frac{1}{2}\ln\sigma_t^{2}\right],\qquad \varepsilon_t=r_t-c-\phi\,r_{t-1},
+\end{equation}
+where $\vartheta$ collects all parameters and $\sigma_t^2$ is computed recursively from~\eqref{eq:garch} or~\eqref{eq:egarch}. Standard errors are those of \citet{bollerslevwooldridge1992}, which remain valid when the assumed distribution is wrong. Models are compared by the Akaike and Bayesian information criteria, $\mathrm{AIC}=-2\ln L+2k$ and $\mathrm{BIC}=-2\ln L+k\ln T$, which reward fit and penalise the number of parameters $k$; lower values are better.\footnote{Computations use Python with the \texttt{statsmodels} library and the \texttt{arch} package of Kevin Sheppard (version 8.0). Returns on either side of the two excluded windows are treated as adjacent in the variance recursion. In the software, $\E|z_{t-1}|$ in~\eqref{eq:egarch} is set to its Gaussian value $\sqrt{2/\pi}$ for every distribution, which affects only the constant $\omega$ (Appendix~\ref{app:absz}).}
+
+\subsection{Estimates}
+
+\begin{table}[t]
+\centering
+\caption{AR(1)--GARCH and AR(1)--EGARCH estimates}\label{tab:models}
+\small
+\input{tables/tab_models.tex}
+\tabnote{Maximum-likelihood estimates of equations~\eqref{eq:mean}--\eqref{eq:egarch} on daily log-returns in per cent; robust standard errors in parentheses. Persistence is $\alpha+\beta$ for GARCH and $\beta$ for EGARCH; the half-life is $\ln 0.5/\ln(\text{persistence})$. $T=1{,}690$. Panel C reports $p$-values of Ljung--Box tests on standardised residuals $\hat z_t$ and on $\hat z_t^2$, and of the ARCH-LM test with five lags; values above 0.05 indicate no remaining dependence. $^{\dagger}$The likelihood of this model is not smooth in $c$ and $\phi$ near the optimum, because of the cluster of zero returns, and the numerical Hessian is unreliable for these two parameters; their standard errors are computed from the outer product of gradients.}
+\end{table}
+
+Table~\ref{tab:models} reports the estimates. Five results stand out.
+
+\emph{Volatility dynamics.} In the Gaussian GARCH model $\hat\alpha=\gnAlpha$ and $\hat\beta=\gnBeta$, so persistence is \gnPers{}: a volatility shock loses half its effect in about \gnHalf{} trading days, and the implied long-run volatility $\sqrt{\hat\omega/(1-\hat\alpha-\hat\beta)}$ is \gnUncond\% a day, close to the sample standard deviation. Across models, persistence lies between 0.93 and 0.97 and the half-life between two and four trading weeks.
+
+\emph{The mean equation.} The AR(1) coefficient is between \gnPhi{} and \enPhi{} in every model, in line with Section~\ref{sec:eff}.
+
+\emph{Tails.} Replacing the Normal by the Student-$t$ raises the log-likelihood from \enLL{} to \etLL{} for EGARCH. Twice the difference, \lrNormT{}, is the likelihood-ratio statistic for the one additional parameter, against a 5\% critical value of 3.84. The estimated degrees of freedom lie between \gtNu{} and \esNu{}. Since the kurtosis of a Student-$t$ is finite only for $\nu>4$, the data cannot reject that the kurtosis of the innovations is infinite, and the sample kurtosis of \aruKurt{} in Table~\ref{tab:desc} is not a stable estimate of a population quantity.
+
+\emph{Asymmetry of the distribution.} The skewness parameter is $\hat\lambda=\esLam$ in the EGARCH model, about four standard errors from zero, and the likelihood-ratio statistic against the symmetric $t$ is \lrTSkew{} (\lrTSkewG{} for GARCH). The right tail is heavier than the left. The symmetric-$t$ models reveal the same asymmetry indirectly. Their intercept is $\hat c\approx\etC\%$ a day and statistically significant, which taken literally would be an expected return of about $-55\%$ a year. It is an artefact: a symmetric density fitted to right-skewed data is centred near the mode, below the mean. With the skewed $t$ the intercept is \esC\% and insignificant.
+
+\emph{Asymmetry of the volatility response.} The EGARCH parameter $\gamma$ is positive in all three specifications ($\hat\gamma=\esGam$ with the skewed $t$, $t$-statistic \esGamT). Volatility rises more after positive shocks than after negative ones, the reverse of the leverage effect. This is plausible for a stock whose large moves are upward jumps followed by several days of heavy repricing, but it is estimated from few episodes and should be regarded as tentative.
+
+On both information criteria the ranking is the same: EGARCH with skewed-$t$ innovations is preferred (AIC \esAIC, BIC \esBIC), followed by EGARCH with symmetric $t$. For each distribution, EGARCH fits better than GARCH.
+
+\subsection{Diagnostics}
+
+If a model is adequate, the standardised residuals $\hat z_t=\hat\varepsilon_t/\hat\sigma_t$ should show no remaining dependence and should follow the assumed distribution. Panel C of Table~\ref{tab:models} addresses the first requirement. No model leaves detectable dependence in $\hat z_t^2$, so the variance equations capture the volatility clustering. The Ljung--Box test on $\hat z_t$ itself has $p$-values between 0.047 and 0.089. The borderline values come from the seventh lag noted in Section~\ref{sec:eff}, which an AR(1) does not address; up to six lags the test does not come close to rejecting.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig3_qq.pdf}
+\caption{Quantile--quantile plots of EGARCH standardised residuals against the fitted innovation distribution. Each point pairs an observed residual with the value the model predicts for an observation of that rank; points on the 45-degree line indicate agreement between model and data.}\label{fig:qq}
+\end{figure}
+
+Figure~\ref{fig:qq} addresses the second requirement by plotting the ordered residuals of the three EGARCH models against the quantiles of their assumed distributions. The Normal fails in both tails: observed extremes are larger than the model allows. The two $t$ distributions fit well up to about four standard deviations, with the skewed $t$ closer in the upper tail. One observation is far from the line in every panel: 14 March 2024, with a standardised residual of \esZmax. The Gaussian model treats a move of that size as impossible. The skewed-$t$ model assigns it a probability of about $3.6\times10^{-5}$, or one day in roughly 110 years. Announcement days of this kind behave like jumps, which motivates the next specification.
+
+\subsection{A specification with Poisson jumps}\label{sec:jump}
+
+The models above describe every return as a draw from one continuous distribution whose scale $\sigma_t$ evolves smoothly. An alternative, following \citet{merton1976} and \citet{jorion1988}, treats news days explicitly as jumps. The shock is the sum of an ordinary Gaussian component and a random number $N_t$ of jumps:
+\begin{equation}\label{eq:jump}
+\varepsilon_t=\sqrt{h_t}\,z_t+\sum_{j=1}^{N_t}J_{j}-\kappa\theta,\qquad z_t\sim N(0,1),\quad N_t\sim\text{Poisson}(\kappa),\quad J_{j}\sim N(\theta,\delta^{2}).
+\end{equation}
+The number of jumps on a day follows a Poisson distribution, $\Pr(N_t=n)=e^{-\kappa}\kappa^{n}/n!$, so $\kappa$ is the expected number of jumps a day. Each jump has mean size $\theta$ and standard deviation $\delta$. Subtracting $\kappa\theta$ keeps the mean of $\varepsilon_t$ at zero. The variance of the ordinary component follows a GARCH(1,1), $h_t=\omega+\alpha\varepsilon_{t-1}^2+\beta h_{t-1}$. Given $N_t=n$, the shock is Normal with mean $(n-\kappa)\theta$ and variance $h_t+n\delta^2$, so its density is a Poisson-weighted mixture of Normal densities,
+\begin{equation}\label{eq:jumpdens}
+f(\varepsilon_t)=\sum_{n=0}^{\infty}\frac{e^{-\kappa}\kappa^{n}}{n!}\;\frac{1}{\sqrt{2\pi(h_t+n\delta^{2})}}\exp\!\left(-\frac{\left(\varepsilon_t-(n-\kappa)\theta\right)^{2}}{2\,(h_t+n\delta^{2})}\right),
+\end{equation}
+and the log-likelihood is $\sum_t\ln f(\varepsilon_t)$. A positive $\theta$ makes the distribution right-skewed, and the mixture makes it fat-tailed.
+
+\begin{table}[t]
+\centering
+\caption{AR(1)--GARCH model with Poisson jumps}\label{tab:jump}
+\small
+\input{tables/tab_jump.tex}
+\tabnote{Maximum-likelihood estimates of equations~\eqref{eq:mean} and~\eqref{eq:jump} on daily log-returns in per cent; robust standard errors in parentheses. $\kappa$ is the expected number of jumps per day, $\theta$ the mean jump size and $\delta$ its standard deviation, both in per cent. Log-likelihood \jumpLL; AIC \jumpAIC; BIC \jumpBIC. The infinite sum in~\eqref{eq:jumpdens} is truncated at $n=20$.}
+\end{table}
+
+Table~\ref{tab:jump} reports the estimates. The jump intensity is $\hat\kappa=\jumpKappa$, about one jump every five trading days, so jumps here are frequent news days and not rare catastrophes. The mean jump is $\hat\theta=+\jumpTheta\%$ ($t$-statistic \jumpThetaT) with standard deviation $\hat\delta=\jumpDelta\%$. Jumps account for \jumpShare\% of the variance of returns. Bayes' rule gives the probability that a jump occurred on a given day, $\Pr(N_t\ge1\mid r_t)$. It exceeds one half on \jumpN{} days, of which \jumpUp{} are up-moves and \jumpDown{} down-moves. The model therefore reaches the same conclusion as the skewed $t$ by a different route: the stock's large moves are mostly upward. In terms of fit it lies between the Gaussian and the Student-$t$ models (AIC \jumpAIC, against \gtAIC{} for GARCH with Student-$t$ and \esAIC{} for EGARCH with skewed $t$), so the continuous skewed distribution describes the data somewhat better than the jump mixture.
+
+% ------------------------------------------------------------------ 5
+\section{Value-at-Risk}\label{sec:var}
+
+\subsection{Definition}
+
+The Value-at-Risk of a position is the loss that will be exceeded only with a small probability $p$ over a given horizon, here one day. It is a quantile of the return distribution. Let $Q_t(p)$ denote the $p$-quantile of $r_t$ given information at $t-1$, so that $\Pr(r_t<Q_t(p))=p$. For the models of Section~\ref{sec:vol},
+\begin{equation}\label{eq:q}
+Q_t(p)=\mu_t+\sigma_t\,F_D^{-1}(p),\qquad \mu_t=c+\phi\,r_{t-1},
+\end{equation}
+where $F_D^{-1}(p)$ is the $p$-quantile of the standardised innovation. For the Normal, $F_N^{-1}(p)=\Phi^{-1}(p)$, which is $-2.326$ at $p=1\%$ and $-1.645$ at $p=5\%$. For the Student-$t$ of equation~\eqref{eq:t},
+\begin{equation}
+F_t^{-1}(p)=\sqrt{\frac{\nu-2}{\nu}}\;t_\nu^{-1}(p),
+\end{equation}
+where $t_\nu^{-1}$ is the quantile function of the ordinary Student-$t$ and the square root rescales it to unit variance. For the skewed $t$ and for the jump mixture~\eqref{eq:jumpdens} the quantile is obtained numerically.
+
+An investor who owns the stock (a \emph{long} position) loses when the return is low. An investor who has sold it short loses when the return is high. Per unit of position and in log-return terms,
+\begin{equation}
+\mathrm{VaR}^{\text{long}}_t(p)=-Q_t(p),\qquad \mathrm{VaR}^{\text{short}}_t(p)=Q_t(1-p).
+\end{equation}
+A \emph{violation} is a day on which the loss exceeds the VaR: $r_t<Q_t(p)$ for the long position, $r_t>Q_t(1-p)$ for the short one. I study both, as \citet{giotlaurent2003} recommend, because the skewness documented above implies that the two tails behave differently. The fitted distributions already show this. The 1\% and 99\% quantiles of the standardised innovation are $\pm2.33$ under the Normal, $\pm\etQninenine$ under the Student-$t$, and \esQone{} and $+\esQninenine$ under the skewed $t$.
+
+\subsection{Backtesting design}
+
+A VaR model is judged by comparing its forecasts with what subsequently happened. Forecasts are made out of sample. Each model is estimated on the first \oosWindow{} returns, about three years, and used to forecast the quantiles of the next day's return. The estimation window is then extended by one day and the model re-estimated. This gives $T=\oosN$ one-day-ahead forecasts from 2 August 2021 to 16 June 2025, none of which uses information from the day being forecast or later.
+
+Two benchmarks that involve no volatility model are included. The \emph{static Normal} uses the sample mean and standard deviation of the estimation window with Gaussian quantiles, $Q_t(p)=\bar r+s\,\Phi^{-1}(p)$, which is the textbook variance--covariance VaR. \emph{Historical simulation} uses the empirical $p$-quantile of the most recent 500 returns and assumes no distribution at all.
+
+If a model is correct, violations occur on a fraction $p$ of days: with \oosN{} forecasts, about \oosExpOne{} at $p=1\%$ and \oosExpFive{} at $p=5\%$. Let $x$ be the observed number of violations and $\hat\pi=x/T$ their frequency. The unconditional-coverage test of \citet{kupiec1995} compares the likelihood of the data under the nominal frequency $p$ and under the observed frequency $\hat\pi$:
+\begin{equation}
+LR_{\mathrm{UC}}=-2\ln\frac{(1-p)^{T-x}\,p^{x}}{(1-\hat\pi)^{T-x}\,\hat\pi^{x}}\;\sim\;\chi^2(1).
+\end{equation}
+It rejects when there are too many violations (risk is understated) and also when there are too few (risk is overstated, and capital is held needlessly). The conditional-coverage test of \citet{christoffersen1998} asks in addition whether violations are independent over time, since violations that cluster on consecutive days indicate that the model reacts too slowly (Appendix~\ref{app:tests}). Finally, forecasts are ranked by the average quantile loss of \citet{koenkerbassett1978},
+\begin{equation}
+\mathcal{L}_t=\bigl(p-\ind\{r_t<Q_t(p)\}\bigr)\bigl(r_t-Q_t(p)\bigr),
+\end{equation}
+which penalises violations in proportion to their size and non-violations in proportion to how far the quantile was from the return. It is minimised on average by the true quantile, so it measures accuracy and not only the count of violations.
+
+\subsection{Results}
+
+\begin{table}[t]
+\centering
+\caption{Out-of-sample backtests of one-day Value-at-Risk}\label{tab:oos}
+\small
+\input{tables/tab_oos.tex}
+\tabnote{\oosN{} one-day-ahead forecasts, 2 August 2021 to 16 June 2025, expanding estimation window re-estimated daily. Viol.\ is the number of violations. $p_{\mathrm{UC}}$ and $p_{\mathrm{CC}}$ are $p$-values of the Kupiec unconditional-coverage and Christoffersen conditional-coverage tests; values below 0.05 reject correct coverage. Loss is the average quantile loss in percentage points; lower is better.}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_violations.pdf}
+\caption{Number of out-of-sample VaR violations by model. The expected number is 9.4 at the 1\% level and 47.1 at the 5\% level. Hatched bars are models whose violation count differs significantly from the expected number (Kupiec test, 5\% level).}\label{fig:viol}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig4_oos_var.pdf}
+\caption{Out-of-sample 1\% and 99\% quantile forecasts and realised returns, August 2021 to June 2025. Grey bars are daily log-returns. Circles mark the violations of the EGARCH skewed-$t$ model: days on which the return falls outside its band.}\label{fig:oos}
+\end{figure}
+
+Table~\ref{tab:oos} reports the backtests, Figure~\ref{fig:viol} summarises the violation counts, and Figure~\ref{fig:oos} plots the forecasts of the preferred model against the static Normal benchmark.
+
+\emph{At the 1\% level, the risk that Gaussian models miss is on the upside.} For a long position, every model produces fewer violations than the 9.4 expected, and none is rejected for understating risk. For a short position the three Gaussian models produce 17 to 21 violations, about twice the expected number, and are rejected. The Student-$t$, skewed-$t$ and jump models produce 8 to 13.
+
+\emph{Symmetric fat tails over-correct on the downside.} The two symmetric-$t$ models record only three long-side violations at 1\%, significantly fewer than expected ($p_{\mathrm{UC}}=0.014$): they demand more capital against a long position than the data justify. At the 5\% level the Gaussian models are also too conservative on the long side, with 24 to 30 violations against 47.1 expected, and the symmetric-$t$ models remain so, with 33 and 35.
+
+\emph{Models with an asymmetric distribution pass every test.} EGARCH with skewed-$t$ innovations records 5 and 11 violations at 1\% and 45 and 47 at 5\%, with $p$-values above 0.1 throughout. GARCH with skewed $t$ and GARCH with Poisson jumps also pass all eight tests at the 5\% significance level, as does historical simulation, which makes no distributional assumption and therefore reproduces the asymmetry of the data automatically.
+
+\emph{The gain from modelling volatility dynamics is small.} The quantile losses of the better models differ in the third decimal place. A \citet{dieboldmariano1995} test of equal average loss between EGARCH skewed-$t$ and historical simulation gives $t$-statistics between \dmHSLOne{} and \dmHSLFive{} across the four tail-and-level combinations, none significant. Against the static Normal, EGARCH skewed-$t$ is significantly better only for the 5\% long-side quantile ($t$-statistic \dmNormalLFive). Figure~\ref{fig:oos} shows why. The conditional band widens after large moves, most visibly after March 2024, but large moves are not preceded by high forecast volatility. On the \violN{} days on which the 1\% or 99\% quantile of the EGARCH skewed-$t$ model was violated, forecast volatility stood on average at the \violSigRank th percentile of its own distribution, and over the whole evaluation period the correlation between the forecast variance and the realised squared return is \corrSigR.
+
+In magnitudes, the average 1\% one-day VaR from the EGARCH skewed-$t$ model over the evaluation period is \avgVarESL\% for a long position and \avgVarESR\% for a short one. The static Normal gives \avgVarNL\% and \avgVarNR\%.
+
+% ------------------------------------------------------------------ 6
+\section{Discussion and limitations}\label{sec:disc}
+
+\emph{What the results mean for a holder of the stock.} The common statement that Gaussian VaR ``underestimates tail risk'' needs a direction attached to it. For ARU the fat tail is the right tail. An investor who is long is, at the 1\% level, adequately or even conservatively covered by a Gaussian model. An investor who is short, or who has sold upside through options, is not: a Gaussian 99\% limit of about 12\% was exceeded twice as often as it should have been, and on one day by a factor of five. This pattern follows from the nature of the asset. A development-stage miner resembles an option on a project, and its large revaluations come from discrete financing and policy announcements.
+
+\emph{What VaR does not measure.} VaR is a quantile and is silent about the size of losses beyond it. On 14 March 2024 the 99\% short-side limit of the preferred model was \esJumpLimit\%, and the realised move was 58\%. Expected shortfall \citep{artzner1999}, the average loss beyond the VaR, addresses this in principle, but with $\hat\nu\approx4$ its estimate would be driven by a handful of observations. An extreme-value approach to the tail \citep{mcneilfrey2000}, or a jump intensity that rises after a jump \citep{maheumccurdy2004}, would be natural extensions.
+
+\emph{Statistical power.} With \oosN{} forecasts only 9.4 violations are expected at the 1\% level. Coverage tests have little power against moderate misspecification in samples of this size, so ``not rejected'' is weaker than ``correct''. The 5\% results, with 47 expected violations, are more informative, and they agree with the 1\% results on the role of skewness.
+
+\emph{Data and scope.} The analysis uses closing prices only. Quoted bid and ask prices would allow a direct test of the bounce explanation in Section~\ref{sec:eff}, which here rests on indirect evidence: the size of the autocovariance, its variation with the tick, and the pattern of variance ratios. Any short gaps in the price series that were filled with the previous close cannot be distinguished from genuinely unchanged prices. Finally, one stock over seven years is a case study. Whether the upside-skewed tail and the weak volatility clustering are general features of pre-production resource companies is an empirical question that this paper does not answer.
+
+% ------------------------------------------------------------------ 7
+\section{Conclusion}\label{sec:concl}
+
+This paper examined the daily returns of Arafura Rare Earths from 2018 to 2025 with two questions in mind. On the first, whether returns are predictable, the answer is that they are negatively autocorrelated at one day, robustly in the statistical sense, but that the autocorrelation is the footprint of a price grid in which one tick is about 2\% of the price. It has the size, the dependence on tick size and the horizon profile that bid--ask bounce implies, and it cannot be traded profitably. The evidence does not contradict weak-form efficiency.
+
+On the second, how to measure the stock's one-day risk, the innovation distribution matters more than the volatility recursion. Innovations have roughly four degrees of freedom and a longer right tail than left. Models that ignore the fat tails understate the risk of a short position, models that add fat tails symmetrically overstate the risk of a long one, and models with an asymmetric distribution, whether a skewed Student-$t$ or a Poisson mixture with positive mean jump, are correctly calibrated in both directions. A simple historical-simulation quantile does as well out of sample, which says that for this stock the unconditional shape of the distribution carries most of the information and conditional volatility relatively little.
+
+For risk management in junior resource stocks more generally, the results suggest three checks before a VaR model is trusted: whether apparent return predictability survives the bid--ask spread, whether the two tails have been examined separately, and whether the model has been tested on data it has not seen.
+
+% ------------------------------------------------------------------ disclosure
+\clearpage
+\section*{Statement of contributions}
+{\small The empirical work on which this paper is based was carried out during the internship by Dr.\ Roman Mestre and me together. He taught me the concepts and methods, and we jointly collected and cleaned the data and estimated the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations. I wrote the paper, both the first version (December 2025) and this revision. Dr.\ Mestre did not take part in writing either version.\par}
+
+\section*{Declaration of generative AI use}
+{\small The first version of this paper (December 2025) and the empirical work described above, including the market-model tests and the GARCH and EGARCH models with Normal and Student-$t$ innovations, predate this revision. In this revision I used Claude (Anthropic) to re-estimate the models in Python and to extend the analysis, including the skewed Student-$t$ and Poisson jump models; to produce figures and tables; and to help draft the text. I take full responsibility for the content of this paper, and all errors are my own.\par}
+
+% ------------------------------------------------------------------ refs
+\phantomsection\addcontentsline{toc}{section}{References}
+\bibliographystyle{apalike}
+\bibliography{refs}
+
+% ------------------------------------------------------------------ appendix
+\phantomsection\addcontentsline{toc}{section}{Appendix}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{0}}
+\appendix
+\numberwithin{equation}{section}
+
+\section{Expected absolute value of the innovation}\label{app:absz}
+
+The EGARCH equation~\eqref{eq:egarch} is centred with $\E|z_t|$, which depends on the distribution.
+
+\emph{Normal.} Since the density is symmetric,
+\begin{equation}
+\E|z|=2\int_{0}^{\infty}\frac{z}{\sqrt{2\pi}}\,e^{-z^{2}/2}\,dz=\frac{2}{\sqrt{2\pi}}\Bigl[-e^{-z^{2}/2}\Bigr]_{0}^{\infty}=\sqrt{\frac{2}{\pi}}\approx 0.798 .
+\end{equation}
+
+\emph{Student-$t$.} Let $c_\nu=\Gamma\!\left(\frac{\nu+1}{2}\right)\big/\bigl[\sqrt{\pi(\nu-2)}\,\Gamma\!\left(\frac{\nu}{2}\right)\bigr]$ be the constant in~\eqref{eq:t}. With the substitution $u=1+z^{2}/(\nu-2)$, so that $z\,dz=\frac{\nu-2}{2}\,du$,
+\begin{equation}
+\E|z|=2c_\nu\int_{0}^{\infty}z\left(1+\frac{z^{2}}{\nu-2}\right)^{-\frac{\nu+1}{2}}dz
+=c_\nu(\nu-2)\int_{1}^{\infty}u^{-\frac{\nu+1}{2}}\,du=\frac{2c_\nu(\nu-2)}{\nu-1},
+\end{equation}
+that is,
+\begin{equation}
+\E|z|=\frac{2\sqrt{\nu-2}\;\Gamma\!\left(\frac{\nu+1}{2}\right)}{\sqrt{\pi}\,(\nu-1)\,\Gamma\!\left(\frac{\nu}{2}\right)} ,
+\end{equation}
+which tends to $\sqrt{2/\pi}$ as $\nu\to\infty$ and equals 0.71 at $\nu=4.12$. Replacing $\E|z|$ by a different constant $m$ in~\eqref{eq:egarch} changes $\omega$ to $\omega+\alpha(m-\E|z|)$ and leaves every other parameter, the fitted variances and the likelihood unchanged.
+
+\section{Test statistics}\label{app:tests}
+
+\emph{Robust autocorrelations.} Let $x_t=r_t-\bar r$. If $x_t$ is unpredictable from its past but has time-varying variance, $\sqrt{T}\hat\rho_k$ is asymptotically Normal with variance $\delta_k$, estimated by \citep{lomackinlay1988}
+\begin{equation}
+\hat\delta_k=\frac{T\sum_{t=k+1}^{T}x_t^2x_{t-k}^2}{\bigl(\sum_{t=1}^{T}x_t^2\bigr)^{2}},\qquad t^{*}_k=\frac{\hat\rho_k}{\sqrt{\hat\delta_k/T}} .
+\end{equation}
+Under independence $\delta_k=1$ and $t_k^{*}$ reduces to $\sqrt{T}\hat\rho_k$. The robust portmanteau statistic is $Q^{*}(m)=\sum_{k=1}^{m}(t_k^{*})^2$, asymptotically $\chi^2(m)$ \citep{lobato2001}.
+
+\emph{Variance ratio.} With $\hat\sigma^2(q)$ the variance of overlapping $q$-day returns divided by $q$, corrected for bias as in \citet{lomackinlay1988}, $\VR(q)=\hat\sigma^2(q)/\hat\sigma^2(1)$ and
+\begin{equation}
+z(q)=\frac{\VR(q)-1}{\sqrt{2(2q-1)(q-1)/(3qT)}},\qquad
+z^{*}(q)=\frac{\VR(q)-1}{\sqrt{\hat\theta(q)/T}},\qquad
+\hat\theta(q)=\sum_{j=1}^{q-1}\left[\frac{2(q-j)}{q}\right]^{2}\hat\delta_j .
+\end{equation}
+
+\emph{Independence of violations.} Let $I_t$ equal one on a violation day and $n_{ij}$ be the number of days on which $I_{t-1}=i$ and $I_t=j$, with $\hat\pi=(n_{01}+n_{11})/T$, $\hat\pi_{01}=n_{01}/(n_{00}+n_{01})$ and $\hat\pi_{11}=n_{11}/(n_{10}+n_{11})$. The statistic of \citet{christoffersen1998} compares the frequency of violations after a violation, $\hat\pi_{11}$, with the frequency after a normal day, $\hat\pi_{01}$:
+\begin{equation}
+LR_{\mathrm{IND}}=-2\ln\frac{(1-\hat\pi)^{n_{00}+n_{10}}\hat\pi^{\,n_{01}+n_{11}}}{(1-\hat\pi_{01})^{n_{00}}\hat\pi_{01}^{\,n_{01}}(1-\hat\pi_{11})^{n_{10}}\hat\pi_{11}^{\,n_{11}}}\;\sim\;\chi^2(1).
+\end{equation}
+The conditional-coverage statistic is $LR_{\mathrm{CC}}=LR_{\mathrm{UC}}+LR_{\mathrm{IND}}\sim\chi^2(2)$.
+
+\emph{Jump probabilities and quantiles.} In the jump model of Section~\ref{sec:jump}, write $w_n=e^{-\kappa}\kappa^{n}/n!$ and let $\varphi_n(\varepsilon_t)$ be the Normal density with mean $(n-\kappa)\theta$ and variance $h_t+n\delta^2$. The probability that at least one jump occurred on day $t$ is, by Bayes' rule,
+\begin{equation}
+\Pr(N_t\ge 1\mid r_t)=1-\frac{w_0\,\varphi_0(\varepsilon_t)}{\sum_{n\ge0}w_n\,\varphi_n(\varepsilon_t)} ,
+\end{equation}
+and the $p$-quantile $x$ of $\varepsilon_t$ solves $\sum_{n\ge0}w_n\,\Phi\bigl((x-(n-\kappa)\theta)/\sqrt{h_t+n\delta^2}\bigr)=p$.
+
+\end{document}

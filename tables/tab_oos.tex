@@ -1,0 +1,29 @@
+\begin{tabular}{@{}l rrrr c rrrr@{}}
+\toprule
+ & \multicolumn{4}{c}{Left tail (long position)} & & \multicolumn{4}{c}{Right tail (short position)} \\
+\cmidrule(lr){2-5}\cmidrule(l){7-10}
+ & Viol. & $p_{\mathrm{UC}}$ & $p_{\mathrm{CC}}$ & Loss & & Viol. & $p_{\mathrm{UC}}$ & $p_{\mathrm{CC}}$ & Loss \\
+\midrule
+\multicolumn{10}{@{}l}{\textit{Panel A: 1\% tail probability} (expected violations: 9.4)} \\
+Static Normal & 6 & 0.231 & 0.470 & 0.138 & & 21 & 0.001 & 0.001 & 0.212 \\
+Historical simulation & 7 & 0.408 & 0.674 & 0.138 & & 10 & 0.848 & 0.882 & 0.204 \\
+GARCH, Normal & 5 & 0.113 & 0.277 & 0.137 & & 21 & 0.001 & 0.001 & 0.221 \\
+EGARCH, Normal & 7 & 0.408 & 0.674 & 0.135 & & 17 & 0.025 & 0.060 & 0.209 \\
+GARCH, Student-$t$ & 3 & 0.014 & 0.049 & 0.151 & & 13 & 0.266 & 0.449 & 0.211 \\
+EGARCH, Student-$t$ & 3 & 0.014 & 0.049 & 0.149 & & 11 & 0.612 & 0.772 & 0.205 \\
+GARCH, skewed $t$ & 5 & 0.113 & 0.277 & 0.141 & & 11 & 0.612 & 0.772 & 0.210 \\
+EGARCH, skewed $t$ & 5 & 0.113 & 0.277 & 0.140 & & 11 & 0.612 & 0.772 & 0.204 \\
+GARCH, Poisson jumps & 5 & 0.113 & 0.277 & 0.135 & & 8 & 0.635 & 0.834 & 0.204 \\
+\addlinespace
+\multicolumn{10}{@{}l}{\textit{Panel B: 5\% tail probability} (expected violations: 47.1)} \\
+Static Normal & 30 & 0.006 & 0.024 & 0.488 & & 38 & 0.162 & 0.205 & 0.613 \\
+Historical simulation & 41 & 0.355 & 0.522 & 0.471 & & 44 & 0.645 & 0.401 & 0.610 \\
+GARCH, Normal & 24 & $<$0.001 & $<$0.001 & 0.470 & & 49 & 0.772 & 0.920 & 0.617 \\
+EGARCH, Normal & 29 & 0.004 & 0.006 & 0.469 & & 45 & 0.757 & 0.808 & 0.605 \\
+GARCH, Student-$t$ & 35 & 0.059 & 0.044 & 0.463 & & 60 & 0.063 & 0.176 & 0.621 \\
+EGARCH, Student-$t$ & 33 & 0.027 & 0.026 & 0.462 & & 55 & 0.246 & 0.506 & 0.607 \\
+GARCH, skewed $t$ & 46 & 0.875 & 0.093 & 0.457 & & 55 & 0.246 & 0.506 & 0.617 \\
+EGARCH, skewed $t$ & 45 & 0.757 & 0.627 & 0.455 & & 47 & 0.994 & 0.912 & 0.607 \\
+GARCH, Poisson jumps & 47 & 0.994 & 0.084 & 0.455 & & 45 & 0.757 & 0.808 & 0.616 \\
+\bottomrule
+\end{tabular}
