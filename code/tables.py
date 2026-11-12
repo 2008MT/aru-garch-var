@@ -3,8 +3,8 @@ import json, os, numpy as np, pandas as pd
 import statsmodels.api as sm
 from common import ROOT
 
-P1all = json.load(open(os.path.join(ROOT, "results", "part1.json"))); P1 = P1all["clean"]; P1r = P1all["raw"]
-P2 = json.load(open(os.path.join(ROOT, "results", "part2.json"))); P2r = json.load(open(os.path.join(ROOT, "results", "part2_raw.json")))
+P1 = json.load(open(os.path.join(ROOT, "results", "part1.json")))
+P2 = json.load(open(os.path.join(ROOT, "results", "part2.json")))
 F = pd.read_csv(os.path.join(ROOT, "results", "oos_var.csv"), index_col=0, parse_dates=True)
 P3 = json.load(open(os.path.join(ROOT, "results", "part3.json"))); TK = json.load(open(os.path.join(ROOT, "results", "ticks.json")))
 TAB = os.path.join(ROOT, "tables")
@@ -52,36 +52,42 @@ s += f"ARCH-LM(5) & {f(A['arch5']['lm'],1)} & {p(A['arch5']['p'])} & & & {f(E['a
 write("tab_serial.tex", s + "\\bottomrule\n\\end{tabular}\n")
 
 # ---------------- Table 3: tick regimes ----------------
-R = P1["roll"]
-s = "\\begin{tabular}{@{}lrrrr@{}}\n\\toprule\nPrice regime (previous close) & Days & Mean tick/price (\\%) & $\\hat\\rho_1$ & Roll spread (\\%) \\\\\n\\midrule\n"
-s += f"Below A\\$0.10 \;(tick A\\$0.001) & {R['low']['n']:,} & {f(R['low']['rel_tick'],2)} & {f(R['low']['rho1'],3)} & {f(R['low']['spread'],2)} \\\\\n".replace(",", "{,}")
-s += f"A\\$0.10 and above \;(tick A\\$0.005) & {R['high']['n']:,} & {f(R['high']['rel_tick'],2)} & {f(R['high']['rho1'],3)} & {f(R['high']['spread'],2)} \\\\\n".replace(",", "{,}")
-s += f"\\midrule\nFull sample & {P1['n_used']-1:,} & {f(P1['price']['rel_tick_mean'],2)} & {f(A['rho1']['rho'],3)} & {f(R['spread'],2)} \\\\\n".replace(",", "{,}")
+R = P1["roll"]; QT = P1["quotes"]; SM = QT["serial_mid"]; SC = QT["serial_close"]; K = P1["contrarian"]
+s = "\\begin{tabular}{@{}lrrrrrr@{}}\n\\toprule\n & & Tick/price & Quoted & \\multicolumn{2}{c}{Closing prices} & Mid-quotes \\\\\n\\cmidrule(lr){5-6}\\cmidrule(l){7-7}\n"
+s += "Previous close & Days & (\\%) & spread (\\%) & $\\hat\\rho_1$ & Roll spread (\\%) & $\\hat\\rho_1$ \\\\\n\\midrule\n"
+for key, lab in (("low", "Below A\\$0.10"), ("high", "A\\$0.10 and above")):
+    v = R[key]
+    s += f"{lab} & " + f"{v['n']:,}".replace(",", "{,}") + f" & {f(v['rel_tick'],2)} & {f(v['quoted'],2)} & {f(v['rho1'],3)} & {f(v['spread'],2)} & {f(v['rho1_mid'],3)} \\\\\n"
+s += "\\midrule\nFull sample & " + f"{P1['n_ret']-1:,}".replace(",", "{,}") + f" & {f(P1['price']['rel_tick_mean'],2)} & {f(QT['spread_mean'],2)} & {f(A['rho1']['rho'],3)} & {f(R['spread'],2)} & {f(SM['rho1']['rho'],3)} \\\\\n"
 write("tab_tick.tex", s + "\\bottomrule\n\\end{tabular}\n")
+
+# ---------------- Table: closing prices versus quote mid-points ----------------
+s = "\\begin{tabular}{@{}l rr@{}}\n\\toprule\n"
+s += "\\multicolumn{3}{@{}l}{\\textit{Panel A: Closing quotes}} \\\\\n\\midrule\n"
+s += f"Quoted spread, mean (\\% of mid-quote) & \\multicolumn{{2}}{{r}}{{{f(QT['spread_mean'],2)}}} \\\\\n"
+s += f"Quoted spread, median (\\%) & \\multicolumn{{2}}{{r}}{{{f(QT['spread_median'],2)}}} \\\\\n"
+s += f"Days with a spread of one tick / two ticks / more (\\%) & \\multicolumn{{2}}{{r}}{{{f(100*QT['one_tick'],0)} / {f(100*QT['two_ticks'],0)} / {f(100*QT['more_ticks'],0)}}} \\\\\n"
+s += f"Close at the bid / at the ask / elsewhere (\\%) & \\multicolumn{{2}}{{r}}{{{f(100*QT['at_bid'],0)} / {f(100*QT['at_ask'],0)} / {f(100*QT['inside'],0)}}} \\\\\n"
+s += "\\addlinespace\n\\multicolumn{3}{@{}l}{\\textit{Panel B: Serial dependence of daily returns}} \\\\\n & Closing price & Mid-quote \\\\\n\\midrule\n"
+s += f"Standard deviation (\\%) & {f(QT['sd_close'],2)} & {f(QT['sd_mid'],2)} \\\\\n"
+s += f"$\\hat\\rho_1$ & {f(SC['rho1']['rho'],3)} & {f(SM['rho1']['rho'],3)} \\\\\n"
+s += f"\\quad robust $t^{{*}}$ & {f(SC['rho1']['t_rob'],2)} & {f(SM['rho1']['t_rob'],2)} \\\\\n"
+s += f"$\\mathrm{{VR}}(2)$ & {f(SC['vr']['2']['vr'],3)} & {f(SM['vr']['2']['vr'],3)} \\\\\n"
+s += f"\\quad robust $z^{{*}}$ & {f(SC['vr']['2']['zs'],2)} & {f(SM['vr']['2']['zs'],2)} \\\\\n"
+s += f"$\\mathrm{{VR}}(5)$ & {f(SC['vr']['5']['vr'],3)} & {f(SM['vr']['5']['vr'],3)} \\\\\n"
+s += f"\\quad robust $z^{{*}}$ & {f(SC['vr']['5']['zs'],2)} & {f(SM['vr']['5']['zs'],2)} \\\\\n"
+s += f"Robust portmanteau $Q^{{*}}(5)$, $p$-value & {p(SC['Q5']['rob_p'])} & {p(SM['Q5']['rob_p'])} \\\\\n"
+s += "\\addlinespace\n\\multicolumn{3}{@{}l}{\\textit{Panel C: Contrarian rule, average return (\\% per day)}} \\\\\n & Return & $t$-statistic \\\\\n\\midrule\n"
+s += f"Valued at closing prices & {f(K['close'],2)} & {f(K['close_t'],2)} \\\\\n"
+s += f"Valued at mid-quotes & {f(K['mid'],2)} & {f(K['mid_t'],2)} \\\\\n"
+s += f"Buying at the ask and selling at the bid & {f(K['net'],2)} & {f(K['net_t'],2)} \\\\\n"
+write("tab_quotes.tex", s + "\\bottomrule\n\\end{tabular}\n")
 
 # ---------------- Table 4: model estimates ----------------
 M = P2["full"]; names = list(M)
-
-
-def opg_se(name, rel=3e-3):
-    """Outer-product-of-gradients standard errors from central finite differences of the
-    observation-level log-likelihood (used where the numerical Hessian is unreliable)."""
-    import warnings; warnings.filterwarnings("ignore")
-    from common import load
-    from part2_var import SPECS, build
-    r = load(True).r.dropna(); m = build(r, SPECS[name]); res = m.fit(disp="off"); th = res.params.values
-    nd = m.distribution.num_params
-    def ll_i(t):
-        fx = m.fix(t); e = fx.resid.dropna().values; s2 = fx.conditional_volatility.dropna().values ** 2
-        return m.distribution.loglikelihood(t[len(t) - nd:], e, s2, individual=True)
-    h = rel * np.maximum(np.abs(th), 0.1); S_ = np.zeros((len(ll_i(th)), len(th)))
-    for i in range(len(th)):
-        e = np.zeros(len(th)); e[i] = h[i]; S_[:, i] = (ll_i(th + e) - ll_i(th - e)) / (2 * h[i])
-    return dict(zip(res.params.index, np.sqrt(np.diag(np.linalg.inv(S_.T @ S_)))))
-
-
-OPG = opg_se("EGARCH-st")
 head = {"GARCH-N": "GARCH", "EGARCH-N": "EGARCH", "GARCH-t": "GARCH", "EGARCH-t": "EGARCH", "GARCH-st": "GARCH", "EGARCH-st": "EGARCH"}
+
+
 s = "\\begin{tabular}{@{}l rr rr rr@{}}\n\\toprule\n & \\multicolumn{2}{c}{Normal} & \\multicolumn{2}{c}{Student-$t$} & \\multicolumn{2}{c}{Skewed $t$} \\\\\n\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\\cmidrule(l){6-7}\n & " + " & ".join(head[n] for n in names) + " \\\\\n\\midrule\n"
 s += "\\multicolumn{7}{@{}l}{\\textit{Panel A: Parameter estimates}} \\\\\n"
 prm = [("$c$", ["Const"]), ("$\\phi$", ["r[1]"]), ("$\\omega$", ["omega"]), ("$\\alpha$", ["alpha[1]"]), ("$\\gamma$", ["gamma[1]"]),
@@ -91,8 +97,7 @@ for lab, keys in prm:
     for n in names:
         k = next((k for k in keys if k in M[n]["params"]), None)
         est.append(f(M[n]["params"][k], 3) if k else "")
-        if k and n == "EGARCH-st" and k in ("Const", "r[1]"): se.append(paren(OPG[k], 3) + "\\rlap{$^{\\dagger}$}")
-        else: se.append(paren(M[n]["se"][k], 3) if k else "")
+        se.append(paren(M[n]["se"][k], 3) if k else "")
     s += f"{lab} & " + " & ".join(est) + " \\\\\n & " + " & ".join(se) + " \\\\\n"
 s += "\\addlinespace\n\\multicolumn{7}{@{}l}{\\textit{Panel B: Volatility dynamics and fit}} \\\\\n"
 s += "Persistence & " + " & ".join(f(M[n]["persistence"], 3) for n in names) + " \\\\\n"
@@ -150,8 +155,24 @@ mac = {}
 def num(name, val, d=2, pct=False):
     s_ = f"{val:,.{d}f}".replace(",", "{,}")
     mac[name] = ("\\ensuremath{-}" + s_[1:]) if s_.startswith("-") else s_      # works in text and in math mode
-C = P1["capm"]; K = P1["contrarian"]; PR = P1["price"]
-num("nPrices", P1["n_total"] + 1, 0); num("nRet", P1["n_total"], 0); num("nUsed", P1["n_used"], 0); num("nStale", P1["n_stale"], 0)
+C = P1["capm"]; PR = P1["price"]; LQ = P1["liq"]; LT = P1["lottery"]
+num("nDays", P1["n_days"], 0); num("nHalt", P1["n_halt"], 0); num("nTraded", P1["n_days"] - P1["n_halt"], 0); num("nUsed", P1["n_ret"], 0)
+num("nIndex", P1["n_index"], 0); num("nGarch", M["GARCH-N"]["n"], 0)
+num("jumpSimple", P1["jump"]["simple"], 0); num("jumpLog", P1["jump"]["log"], 0)
+num("volRatio", D["aru"]["sd"] / D["xao"]["sd"], 0)
+num("liqMedian", LQ["median_value_m"], 1); num("liqMinVol", LQ["min_volume"], 0)
+num("lotMonths", LT["n_months"], 0); num("lotShare", 100 * LT["share_gt10"], 0); num("lotMeanMax", LT["mean_max"], 0)
+num("lotUpTen", LT["n_up10"], 0); num("lotDownTen", LT["n_down10"], 0)
+_r1 = A["rho1"]["rho"]
+num("vrImpFive", 1 + 2 * _r1 * 4 / 5, 2); num("vrImpTen", 1 + 2 * _r1 * 9 / 10, 2); num("vrImpTwenty", 1 + 2 * _r1 * 19 / 20, 2)
+num("rhoSeven", A["rho7"]["rho"], 3); num("rhoSevenTrob", A["rho7"]["t_rob"], 2)
+num("qSpread", QT["spread_mean"], 1); num("qSpreadMed", QT["spread_median"], 1); num("qHalf", QT["half_mean"], 1); num("qOneTick", 100 * QT["one_tick"], 0)
+num("qTwoTick", 100 * QT["two_ticks"], 0); num("qAtBid", 100 * QT["at_bid"], 0); num("qAtAsk", 100 * QT["at_ask"], 0); num("qAtQuote", 100 * (QT["at_bid"] + QT["at_ask"]), 0)
+num("sameVrTwo", SC["vr"]["2"]["vr"], 2); num("qNdays", QT["n_days"], 0); num("qInside", 100 * QT["inside"], 0); num("qNmid", QT["n_mid"], 0); num("qNoise", 100 * QT["noise_share"], 0); num("qInvalid", QT["n_invalid"], 0)
+num("midRho", SM["rho1"]["rho"], 3); num("midRhoT", SM["rho1"]["t_iid"], 2); num("midRhoTrob", SM["rho1"]["t_rob"], 2)
+num("midVrTwo", SM["vr"]["2"]["vr"], 2); num("midVrTwoZ", SM["vr"]["2"]["zs"], 2); num("midQp", SM["Q5"]["rob_p"], 2)
+num("sameRho", SC["rho1"]["rho"], 3); num("sameRhoTrob", SC["rho1"]["t_rob"], 2); num("midDrop", 100 * (1 - SM["rho1"]["rho"] / SC["rho1"]["rho"]), 0)
+num("qLowSpread", R["low"]["quoted"], 2); num("qHighSpread", R["high"]["quoted"], 2); num("midRhoLow", R["low"]["rho1_mid"], 2); num("midRhoHigh", R["high"]["rho1_mid"], 2)
 num("aruSD", D["aru"]["sd"], 2); num("aruAnnVol", D["aru"]["ann_vol"], 0); num("xaoSD", D["xao"]["sd"], 2); num("xaoAnnVol", D["xao"]["ann_vol"], 0)
 num("aruSkew", D["aru"]["skew"], 2); num("aruKurt", D["aru"]["kurt"], 1); num("aruMax", D["aru"]["max"], 1); num("aruMin", D["aru"]["min"], 1)
 num("aruMean", D["aru"]["mean"], 3); num("zeroShare", 100 * D["aru"]["zero"], 0); num("xaoSkew", D["xao"]["skew"], 2)
@@ -162,15 +183,16 @@ num("rhoOne", A["rho1"]["rho"], 3); num("rhoOneT", A["rho1"]["t_iid"], 2); num("
 num("rhoOneRes", E["rho1"]["rho"], 3); num("rhoOneResTrob", E["rho1"]["t_rob"], 2)
 num("vrTwo", A["vr"]["2"]["vr"], 2); num("vrTwoZ", A["vr"]["2"]["zs"], 2); num("vrFive", A["vr"]["5"]["vr"], 2); num("vrFiveZ", A["vr"]["5"]["zs"], 2)
 num("vrTen", A["vr"]["10"]["vr"], 2); num("vrTenZ", A["vr"]["10"]["zs"], 2); num("vrTwenty", A["vr"]["20"]["vr"], 2); num("vrTwentyZ", A["vr"]["20"]["zs"], 2)
-num("arRsq", 100 * P1["ar1"]["r2"], 1); num("arMeanAbs", P1["ar1"]["mean_abs_pred"], 2); num("meanAbsRet", K["mean_abs_r"], 1)
+num("arRsq", 100 * P1["ar1"]["r2"], 1); num("meanAbsRet", K["mean_abs_r"], 1)
 num("qTwoTen", A["Q2_10"]["lb"], 0); num("qTwoTenXao", S["xao"]["Q2_10"]["lb"], 0); num("archLM", A["arch5"]["lm"], 1)
 num("xaoRhoOne", S["xao"]["rho1"]["rho"], 2); num("xaoRhoOneT", S["xao"]["rho1"]["t_iid"], 1); num("xaoRhoOneTrob", S["xao"]["rho1"]["t_rob"], 1)
 num("tickMean", PR["rel_tick_mean"], 1); num("tickMedian", PR["rel_tick_median"], 1); num("tickMin", PR["rel_tick_min"], 1); num("tickMax", PR["rel_tick_max"], 1)
 num("priceMin", PR["min"], 3); num("priceMax", PR["max"], 2); num("shareBelow", 100 * PR["share_below_10c"], 0)
 num("rollSpread", R["spread"], 1); num("rollLow", R["low"]["spread"], 1); num("rollHigh", R["high"]["spread"], 1)
 num("rhoLow", R["low"]["rho1"], 2); num("rhoHigh", R["high"]["rho1"], 2); num("tickLow", R["low"]["rel_tick"], 1); num("tickHigh", R["high"]["rel_tick"], 1)
-num("conGross", K["gross"], 2); num("conGrossT", K["gross_t"], 1); num("conNet", K["net"], 2); num("conNetT", K["net_t"], 1)
-num("conLoss", -K["net"], 2); num("conCost", K["cost"], 2); num("conTurn", K["turnover"], 2); num("conBreakeven", K["breakeven_half"], 2); num("conHalf", K["half_spread"], 1)
+num("conGross", K["close"], 2); num("conGrossT", K["close_t"], 1); num("conMid", K["mid"], 2); num("conMidT", K["mid_t"], 1)
+num("conNet", K["net"], 2); num("conNetT", K["net_t"], 1); num("conLoss", -K["net"], 2); num("conCost", K["cost"], 2)
+num("conTurn", K["turnover"], 2); num("conHalf", K["half_spread"], 1); num("conAnn", K["ann_close"], 0)
 for n in names:
     t = n.replace("-", "").replace("GARCH", "G").replace("EG", "EG")
     key = {"GARCH-N": "gn", "EGARCH-N": "en", "GARCH-t": "gt", "EGARCH-t": "et", "GARCH-st": "gs", "EGARCH-st": "es"}[n]
@@ -198,12 +220,6 @@ num("jumpThetaT", P3["params"]["muJ"] / P3["se"]["muJ"], 1); num("jumpLL", P3["l
 num("jumpShare", 100 * P3["jump_var_share"], 0); num("jumpPerYear", P3["jumps_per_year"], 0); num("jumpN", P3["n_post50"], 0)
 num("jumpUp", P3["post_up"], 0); num("jumpDown", P3["post_down"], 0); num("jumpPers", P3["persistence"], 2)
 num("tickZero", TK["share0"], 0); num("tickOne", TK["share1"], 0); num("tickTwo", TK["share_le2"], 0)
-num("rawEsUC", min(P2r["oos"]["EGARCH-st"][k]["p_uc"] for k in P2r["oos"]["EGARCH-st"]), 2)
-# raw-data robustness
-Dr = P1r["desc"]["aru"]; Sr = P1r["serial"]["aru"]; Mr = P2r["full"]
-num("rawN", P1r["n_used"], 0); num("rawKurt", Dr["kurt"], 1); num("rawSkew", Dr["skew"], 2); num("rawRhoOne", Sr["rho1"]["rho"], 3); num("rawRhoOneTrob", Sr["rho1"]["t_rob"], 2)
-num("rawVrTwo", Sr["vr"]["2"]["vr"], 2); num("rawEsNu", Mr["EGARCH-st"]["params"]["eta"], 2); num("rawEsLam", Mr["EGARCH-st"]["params"]["lambda"], 3)
-num("rawEsLL", Mr["EGARCH-st"]["ll"], 1); num("rawGtLL", Mr["GARCH-t"]["ll"], 1); num("rawEtLL", Mr["EGARCH-t"]["ll"], 1); num("rawBeta", P1r["capm"]["beta"], 2)
 for k, v in DM.items():
     a, b, c = k.split("_"); nm = "dm" + a.replace("-", "") + ("L" if b == "left" else "R") + ("One" if c == "0.01" else "Five")
     num(nm, v, 2)

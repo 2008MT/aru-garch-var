@@ -141,9 +141,8 @@ def oos(r):
 
 
 if __name__ == "__main__":
-    clean = "--raw" not in sys.argv
-    tag = "" if clean else "_raw"
-    r = load(clean).r.dropna()
+    tag = ""
+    r = load().r.dropna()
     full, ser = full_sample(r)
     R = {"n": int(len(r)), "T0": T0, "refit": REFIT, "full": full}
     ser.to_csv(os.path.join(ROOT, "results", f"insample_series{tag}.csv"))

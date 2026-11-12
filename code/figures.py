@@ -4,7 +4,7 @@ matplotlib.use("pgf")
 import matplotlib.pyplot as plt, matplotlib.dates as mdates
 from scipy import stats
 from arch.univariate import SkewStudent
-from common import load, ROOT, STALE
+from common import load, load_calendar, ROOT
 from part1_efficiency import acf_robust
 
 plt.rcParams.update({"pgf.texsystem": "pdflatex", "pgf.rcfonts": False, "text.usetex": True,
@@ -16,23 +16,18 @@ plt.rcParams.update({"pgf.texsystem": "pdflatex", "pgf.rcfonts": False, "text.us
                      "axes.axisbelow": True, "legend.frameon": False, "axes.unicode_minus": False})
 BLUE, ORANGE, INK, MUTED = "#2a78d6", "#eb6834", "#1a1a19", "#8a8983"
 OUT = os.path.join(ROOT, "figures"); W = 6.3
-P1 = json.load(open(os.path.join(ROOT, "results", "part1.json")))["clean"]
+P1 = json.load(open(os.path.join(ROOT, "results", "part1.json")))
 P2 = json.load(open(os.path.join(ROOT, "results", "part2.json")))
 
 
-def shade(ax):
-    for a, b in STALE:
-        ax.axvspan(pd.Timestamp(a), pd.Timestamp(b), color="#d9d8d3", lw=0, zorder=0)
-
-
 def fig_price_returns():
-    raw = load(False); df = load(True)
+    raw = load_calendar(); df = load()
     fig, (a, b) = plt.subplots(2, 1, figsize=(W, 4.3), sharex=True, gridspec_kw={"height_ratios": [1, 1.15], "hspace": 0.12})
-    a.plot(raw.index, raw.aru, color=INK, lw=0.8); a.set_yscale("log"); shade(a)
+    a.plot(df.index, df.aru, color=INK, lw=0.8); a.set_yscale("log")
     a.set_yticks([0.05, 0.1, 0.2, 0.4, 0.6]); a.set_yticklabels(["0.05", "0.10", "0.20", "0.40", "0.60"]); a.minorticks_off()
     a.set_ylabel(r"Close (A\$, log scale)")
     a.text(0.008, 0.93, "(a) Closing price", transform=a.transAxes, va="top", fontsize=9.5)
-    b.vlines(df.index, 0, df.r, color=BLUE, lw=0.55); shade(b); b.axhline(0, color=INK, lw=0.5)
+    b.vlines(df.index, 0, df.r, color=BLUE, lw=0.55); b.axhline(0, color=INK, lw=0.5)
     b.set_ylabel(r"Daily log-return (\%)"); b.set_ylim(-32, 64)
     b.text(0.008, 0.95, "(b) Daily log-returns", transform=b.transAxes, va="top", fontsize=9.5)
     def note(date, y, text, tx, ty, ha):
@@ -42,27 +37,28 @@ def fig_price_returns():
     t = df.r["2020-03-01":"2020-03-31"].idxmin()
     note(t, df.r[t], "COVID-19 sell-off", "2020-06-20", -27, "left")
     note("2024-03-14", df.r["2024-03-14"], "A\\$840m Commonwealth\nfunding package", "2023-12-20", 50, "right")
-    b.text(pd.Timestamp("2022-06-01"), 30, "excluded\n(filled gaps)", fontsize=8, color="#52514e", ha="left", va="center")
     b.xaxis.set_major_locator(mdates.YearLocator()); b.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     b.set_xlim(raw.index[0] - pd.Timedelta(days=20), raw.index[-1] + pd.Timedelta(days=20))
     fig.savefig(os.path.join(OUT, "fig1_price_returns.pdf"), bbox_inches="tight"); plt.close(fig)
 
 
 def fig_acf():
-    r = load(True).r.dropna().values; L = 20
-    fig, axes = plt.subplots(1, 2, figsize=(W, 2.5), gridspec_kw={"wspace": 0.28})
-    for ax, x, title in ((axes[0], r, "(a) Returns $r_t$"), (axes[1], (r - r.mean()) ** 2, "(b) Squared returns $r_t^2$")):
+    df = load(); r = df.r.dropna().values; rm = df.rmid.dropna().values; L = 20
+    fig, axes = plt.subplots(1, 3, figsize=(W, 2.35), sharey=True, gridspec_kw={"wspace": 0.09})
+    panels = ((axes[0], r, "(a) Closing-price returns", True), (axes[1], rm, "(b) Mid-quote returns", True),
+              (axes[2], (r - r.mean()) ** 2, "(c) Squared returns", False))
+    for ax, x, title, robust in panels:
         est = [acf_robust(x, k) for k in range(1, L + 1)]
         rho = np.array([e[0] for e in est]); rob = 1.96 * np.array([e[2] for e in est]); iid = 1.96 / np.sqrt(len(x))
         lags = np.arange(1, L + 1)
         ax.bar(lags, rho, width=0.55, color=BLUE, zorder=3)
         ax.axhline(0, color=INK, lw=0.5)
-        if ax is axes[0]:
+        if robust:
             ax.plot(lags, rob, color=ORANGE, lw=1.0, zorder=4, label=r"robust 95\% band"); ax.plot(lags, -rob, color=ORANGE, lw=1.0, zorder=4)
         ax.axhline(iid, color=MUTED, lw=0.8, ls=(0, (4, 2)), label=r"i.i.d.\ 95\% band"); ax.axhline(-iid, color=MUTED, lw=0.8, ls=(0, (4, 2)))
         ax.set_xlabel("Lag (trading days)"); ax.set_xticks([1, 5, 10, 15, 20]); ax.set_title(title, loc="left", pad=4)
         ax.set_ylim(-0.17, 0.17)
-    axes[0].set_ylabel("Autocorrelation"); axes[0].legend(loc="upper right", handlelength=1.6)
+    axes[0].set_ylabel("Autocorrelation"); axes[0].legend(loc="upper right", handlelength=1.4, fontsize=7.5, borderaxespad=0.2)
     fig.savefig(os.path.join(OUT, "fig2_acf.pdf"), bbox_inches="tight"); plt.close(fig)
 
 
@@ -108,10 +104,13 @@ def fig_oos():
 
 def fig_ticks():
     """(a) one tick as a share of the price; (b) distribution of daily price changes measured in ticks."""
-    raw = load(False); df = load(True)
+    df = load()
     fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.45), gridspec_kw={"wspace": 0.3})
-    a.plot(raw.index, raw.rel_tick, color=INK, lw=0.7)
-    a.set_ylabel(r"One tick as \% of price"); a.set_ylim(0, 5.4); a.set_title("(a) Size of the minimum price step", loc="left", pad=4)
+    a.plot(df.index, df.rel_tick, color=INK, lw=0.7, label="One tick")
+    sp = (2 * df.hs).rolling(21, min_periods=10).mean()
+    a.plot(df.index, sp, color=ORANGE, lw=1.1, label="Quoted spread (21-day mean)")
+    a.set_ylabel(r"\% of price"); a.set_ylim(0, 7.4); a.set_title("(a) Tick and quoted bid--ask spread", loc="left", pad=4)
+    a.legend(loc="upper left", handlelength=1.4, fontsize=7.5, borderaxespad=0.2, ncol=1)
     a.xaxis.set_major_locator(mdates.YearLocator(2)); a.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     d = df.dropna(subset=["r"]); prev = d.aru / np.exp(d.r / 100)            # previous close implied by the return
     tick_prev = np.where(prev < 0.10 - 1e-9, 0.001, 0.005)
@@ -147,7 +146,7 @@ def fig_violations():
                                       bbox=dict(facecolor="white", edgecolor="none", pad=0.6))
         ax.set_xlim(0, 26 if key.endswith("0.01") else 72); ax.set_title(title, loc="left", pad=4); ax.grid(axis="y", visible=False)
         ax.set_ylim(-0.6, len(order) - 0.1); ax.set_yticks(y); ax.set_yticklabels([lab[m] for m in order])
-    for ax in axes[1]: ax.set_xlabel("Number of violations in 941 forecasts")
+    for ax in axes[1]: ax.set_xlabel("Number of violations in %d forecasts" % P2["oos_n"])
     h, l = axes[0, 1].get_legend_handles_labels()
     fig.legend(h, l, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.045), handlelength=1.8, columnspacing=2.0)
     fig.savefig(os.path.join(OUT, "fig_violations.pdf"), bbox_inches="tight"); plt.close(fig)

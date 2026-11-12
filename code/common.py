@@ -1,31 +1,36 @@
-"""Shared data preparation for the ARU.AX study."""
+"""Shared data preparation for the ARU study (Bloomberg daily data)."""
 import numpy as np, pandas as pd, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-STALE = [("2022-03-17", "2022-04-22"), ("2022-10-07", "2022-10-20")]   # runs of identical closes
 
 
-def load(clean=True):
-    """Return a DataFrame indexed by date with prices, log-returns (percent) and excess returns.
+def load_calendar():
+    """All exchange days in the sample, including the days on which ARU was in a trading halt (no close)."""
+    df = pd.read_csv(os.path.join(ROOT, "data", "aru_bloomberg_daily.csv"), parse_dates=["date"]).set_index("date").sort_index()
+    return df
 
-    clean=True  : drop the duplicated row and set the returns contaminated by stale quotes to NaN
-    clean=False : the price file as supplied (duplicate row dropped only)
+
+def load():
+    """Trading days only, with log-returns in per cent.
+
+    r     ARU close-to-close log-return (measured from the last close before a trading halt)
+    m     All Ordinaries log-return over the same interval;  rf  risk-free return over the same interval
+    mid   mid-point of the closing bid and ask (when bid < ask);  rmid  log-return of the mid-point
+    hs    quoted half-spread as a percentage of the mid-point;    tick  minimum price step at the close
     """
-    df = pd.read_csv(os.path.join(ROOT, "data", "aru_xao_daily.csv"), parse_dates=["date"])
-    # second 2022-12-01 row repeats the index level of 2022-11-28 -> spurious
-    df = df[~df.date.duplicated(keep="first")].set_index("date").sort_index()
-    df["r"] = 100 * np.log(df.aru).diff()          # ARU log-return, percent
-    df["m"] = 100 * np.log(df.xao).diff()          # market log-return, percent
-    df["rf"] = df.rf_pct                            # daily risk-free rate, already in percent
-    df["stale"] = False
-    if clean:
-        for a, b in STALE:
-            # returns inside the flat block and the first 'catch-up' return after it
-            idx = df.index[(df.index > a) & (df.index <= b)]
-            nxt = df.index[df.index > b][0]
-            df.loc[idx.append(pd.DatetimeIndex([nxt])), "stale"] = True
-        df.loc[df.stale, ["r", "m"]] = np.nan
-    df["tick"] = np.where(df.aru < 0.10 - 1e-12, 0.001, 0.005)
-    df["rel_tick"] = 100 * df.tick / df.aru
-    return df.iloc[1:]
+    cal = load_calendar()
+    cal["rfcum"] = cal.rf_pct.cumsum()
+    d = cal[cal.aru.notna()].copy()                    # drop trading-halt days
+    d["r"] = 100 * np.log(d.aru).diff()
+    d["m"] = 100 * np.log(d.xao).diff()
+    d["rf"] = d.rfcum.diff()
+    ok = d.bid.notna() & d.ask.notna() & (d.ask > d.bid + 1e-12)
+    d["mid"] = np.where(ok, (d.bid + d.ask) / 2, np.nan)
+    d["rmid"] = 100 * np.log(d.mid).diff()            # NaN unless both days have valid quotes
+    d["hs"] = 100 * (d.ask - d.bid) / (2 * d.mid)
+    d["tick"] = np.where(d.aru < 0.10 - 1e-9, 0.001, 0.005)
+    d["rel_tick"] = 100 * d.tick / d.aru
+    d["qtick"] = np.where(d.bid < 0.10 - 1e-9, 0.001, 0.005)
+    d["spread_ticks"] = np.where(ok, np.rint((d.ask - d.bid) / d.qtick), np.nan)
+    return d.iloc[1:]

@@ -94,7 +94,7 @@ def sandwich(th, r, rel=3e-3):
 
 
 if __name__ == "__main__":
-    rs = load(True).r.dropna(); r = rs.values; n = len(r)
+    rs = load().r.dropna(); r = rs.values; n = len(r)
     o = fit(r); th = unpack(o.x); se = sandwich(th, r)
     eps, h, _ = filt(th, r); k = len(th); T = len(eps); ll = -o.fun
     lam, muJ, sigJ = th[5], th[6], th[7]
