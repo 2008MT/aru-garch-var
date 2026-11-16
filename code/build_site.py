@@ -23,12 +23,13 @@ h1{font-size:2rem;line-height:1.2;margin:0 0 6px;letter-spacing:-0.01em}
 h2{font-size:1.3rem;margin:56px 0 8px}
 p{margin:0 0 14px;max-width:72ch}
 a{color:var(--link)}
-.meta{color:var(--ink2);margin:0 0 20px}
+.meta{color:var(--ink2);margin:0 0 6px}
+.links{margin-top:16px}
 .links a{display:inline-block;margin:0 14px 6px 0;font-weight:600}
 .lead{font-size:1.1rem}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:28px 0 8px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
-.tile b{display:block;font-size:1.45rem;line-height:1.25;white-space:nowrap}
+.tile b{display:block;font-size:1.3rem;line-height:1.25;white-space:nowrap}
 .tile span{color:var(--ink2);font-size:0.86rem;line-height:1.35;display:block;margin-top:4px}
 figure{margin:16px 0 22px}
 figure a{display:block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px}
@@ -154,6 +155,8 @@ def main():
 <h1>An Empirical Study in Junior Mining Stock Risk Management</h1>
 <p class="sub">Weak-form efficiency tests and Value-at-Risk estimation with GARCH models</p>
 <p class="meta">Mael Tok · McGill University · first version December 2025, this version November 2026</p>
+<p class="meta">Research internship at the Faculty of Economics, University of Montpellier, where the empirical work behind the paper was carried out
+jointly with Dr. Roman Mestre.</p>
 <p class="links">{''.join(links)}</p>
 
 <p class="lead">Arafura Rare Earths is an Australian company developing a rare-earth mine that is not yet financed or built. Its shares are about
@@ -228,8 +231,6 @@ is the short seller, which is the risk a Gaussian model understates.</p>
 <footer>
 <p>Data: Bloomberg Terminal (daily closes, closing quotes and volume), not redistributed. Method, limitations and references are in the
 <a href="{PAPER}">paper</a>; every table, figure and number is reproducible from the <a href="{REPO}">code</a>. This is a study of method, not investment advice.</p>
-<p>The empirical work on which the paper is based was carried out jointly with Dr. Roman Mestre during a research internship at the Faculty of Economics,
-University of Montpellier. A statement of contributions and a declaration of generative-AI use are at the end of the paper.</p>
 </footer>
 </main>
 </body>
