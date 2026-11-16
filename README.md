@@ -5,6 +5,8 @@ Mael Tok (McGill University). First version December 2025; this version November
 
 📄 **Paper:** [`TOK_GARCH_RISK_JUNIOR_MINING.pdf`](TOK_GARCH_RISK_JUNIOR_MINING.pdf)
 
+🌐 **Website:** <https://2008mt.github.io/aru-garch-var/>
+
 ## Summary
 
 Daily risk of Arafura Rare Earths (ASX: ARU), a pre-production rare-earth developer, 2018–2025.
@@ -31,6 +33,7 @@ main.tex, refs.bib, numbers.tex    LaTeX source (compiles as is from tables/ and
 code/                              Python code that produces every table, figure and number
 results/                           summary output of the code (JSON)
 data/                              data description (Bloomberg prices are not redistributed)
+index.html                         the website (served by GitHub Pages)
 ```
 
 ## Reproducing the results
@@ -45,6 +48,7 @@ Add the data file described in `data/README.md`, then run from `code/`:
 | 3 | `python part3_jump.py` | GARCH with Poisson jumps and its backtest (~2 min) |
 | 4 | `python figures.py` | all figures |
 | 5 | `python tables.py` | LaTeX tables and every number quoted in the text (`numbers.tex`) |
+| 6 | `python build_site.py` | `index.html` and the PNG figures it shows (needs poppler's `pdftoppm`) |
 
 Then compile: `pdflatex main && bibtex main && pdflatex main && pdflatex main`.
 
