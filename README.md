@@ -5,6 +5,8 @@ Mael Tok (McGill University). First version December 2025; this version November
 
 📄 **Paper:** [`TOK_GARCH_RISK_JUNIOR_MINING.pdf`](TOK_GARCH_RISK_JUNIOR_MINING.pdf)
 
+📑 **SSRN:** <https://ssrn.com/abstract=7694779>
+
 🌐 **Website:** <https://2008mt.github.io/aru-garch-var/>
 
 ## Summary

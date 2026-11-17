@@ -10,7 +10,7 @@ FIG = os.path.join(ROOT, "figures")
 REPO = "https://github.com/2008MT/aru-garch-var"
 PAPER = "TOK_GARCH_RISK_JUNIOR_MINING.pdf"
 # Add the links here once the paper is posted; a link that is None is left off the page.
-SSRN = None
+SSRN = "https://ssrn.com/abstract=7694779"
 ARXIV = None
 
 CSS = """
@@ -90,7 +90,7 @@ def main():
     es = O["EGARCH-st"]
 
     links = [f'<a href="{PAPER}">Read the paper (PDF)</a>']
-    if SSRN: links.append(f'<a href="{SSRN}">SSRN</a>')
+    if SSRN: links.append(f'<a href="{SSRN}">SSRN page</a>')
     if ARXIV: links.append(f'<a href="{ARXIV}">arXiv</a>')
     links.append(f'<a href="{REPO}">Code on GitHub</a>')
 
@@ -226,7 +226,7 @@ announcements. Stocks with this lottery-like profile are known to attract invest
 is the short seller, which is the risk a Gaussian model understates.</p>
 
 <h2>Cite</h2>
-<pre>Tok, M. (2026). An Empirical Study in Junior Mining Stock Risk Management: Weak-Form Efficiency Tests and Value-at-Risk Estimation with GARCH Models. Working paper, November 2026. https://2008mt.github.io/aru-garch-var/</pre>
+<pre>Tok, M. (2026). An Empirical Study in Junior Mining Stock Risk Management: Weak-Form Efficiency Tests and Value-at-Risk Estimation with GARCH Models. Working paper. Available at SSRN: https://ssrn.com/abstract=7694779</pre>
 
 <footer>
 <p>Data: Bloomberg Terminal (daily closes, closing quotes and volume), not redistributed. Method, limitations and references are in the
