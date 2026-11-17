@@ -99,11 +99,17 @@ if __name__ == "__main__":
     eps, h, _ = filt(th, r); k = len(th); T = len(eps); ll = -o.fun
     lam, muJ, sigJ = th[5], th[6], th[7]
     dens = mix_pdf(eps, h, th); post = 1 - dens[:, 0] / dens.sum(1)            # P(N_t >= 1 | r_t)
+    # posterior mean of the jump component: E[S | eps] = sum_n P(N=n | eps) * E[S | eps, N=n], where
+    # E[S | eps, N=n] = n*theta + n*delta^2 / (h + n*delta^2) * (eps - (n - kappa)*theta)
+    pn = dens / dens.sum(1, keepdims=True); v = h[:, None] + NS[None, :] * th[7] ** 2
+    ES = (pn * (NS * th[6] + NS * th[7] ** 2 / v * (eps[:, None] - (NS - th[5]) * th[6]))).sum(1)
     jv = lam * (muJ ** 2 + sigJ ** 2)
     R = dict(params=dict(zip(NAMES, th)), se=dict(zip(NAMES, se)), ll=ll, k=k, n=T, aic=-2 * ll + 2 * k, bic=-2 * ll + k * np.log(T),
              persistence=th[3] + th[4], jumps_per_year=252 * lam, days_between=1 / lam, jump_var=jv, mean_h=float(h.mean()),
              jump_var_share=float(jv / (h.mean() + jv)), n_post50=int((post > 0.5).sum()), n_post90=int((post > 0.9).sum()),
-             post_up=int(((post > 0.5) & (eps > 0)).sum()), post_down=int(((post > 0.5) & (eps < 0)).sum()),
+             post_up=int(((post > 0.5) & (ES > 0)).sum()), post_down=int(((post > 0.5) & (ES < 0)).sum()),
+             ret_up=int(((post > 0.5) & (eps > 0)).sum()), sign_agree=int(((post > 0.5) & (np.sign(ES) == np.sign(eps))).sum()),
+             p_jump_pos=float(stats.norm.cdf(th[6] / th[7])),
              post_20240314=float(post[rs.index[1:] == pd.Timestamp("2024-03-14")][0]),
              uncond_sd=float(np.sqrt(th[2] / (1 - th[3] - th[4]) + jv)))
     print("LL %.2f AIC %.1f BIC %.1f" % (ll, R["aic"], R["bic"]))

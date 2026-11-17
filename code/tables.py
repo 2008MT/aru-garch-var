@@ -193,6 +193,7 @@ num("rhoLow", R["low"]["rho1"], 2); num("rhoHigh", R["high"]["rho1"], 2); num("t
 num("conGross", K["close"], 2); num("conGrossT", K["close_t"], 1); num("conMid", K["mid"], 2); num("conMidT", K["mid_t"], 1)
 num("conNet", K["net"], 2); num("conNetT", K["net_t"], 1); num("conLoss", -K["net"], 2); num("conCost", K["cost"], 2)
 num("conTurn", K["turnover"], 2); num("conHalf", K["half_spread"], 1); num("conAnn", K["ann_close"], 0)
+KL = P1["contrarian_lag"]; num("lagClose", KL["close"], 3); num("lagCloseT", KL["close_t"], 2); num("lagMid", KL["mid"], 3); num("lagNet", KL["net"], 2)
 for n in names:
     t = n.replace("-", "").replace("GARCH", "G").replace("EG", "EG")
     key = {"GARCH-N": "gn", "EGARCH-N": "en", "GARCH-t": "gt", "EGARCH-t": "et", "GARCH-st": "gs", "EGARCH-st": "es"}[n]
@@ -218,7 +219,7 @@ num("jumpRatioN", F.loc["2024-03-14", "r"] / F.loc["2024-03-14", "Normal_R01"], 
 num("jumpKappa", P3["params"]["lam"], 2); num("jumpTheta", P3["params"]["muJ"], 1); num("jumpDelta", P3["params"]["sigJ"], 1)
 num("jumpThetaT", P3["params"]["muJ"] / P3["se"]["muJ"], 1); num("jumpLL", P3["ll"], 1); num("jumpAIC", P3["aic"], 1); num("jumpBIC", P3["bic"], 1)
 num("jumpShare", 100 * P3["jump_var_share"], 0); num("jumpPerYear", P3["jumps_per_year"], 0); num("jumpN", P3["n_post50"], 0)
-num("jumpUp", P3["post_up"], 0); num("jumpDown", P3["post_down"], 0); num("jumpPers", P3["persistence"], 2)
+num("jumpUp", P3["post_up"], 0); num("jumpPpos", P3["p_jump_pos"], 2); num("jumpAgree", P3["sign_agree"], 0); num("jumpDown", P3["post_down"], 0); num("jumpPers", P3["persistence"], 2)
 num("tickZero", TK["share0"], 0); num("tickOne", TK["share1"], 0); num("tickTwo", TK["share_le2"], 0)
 for k, v in DM.items():
     a, b, c = k.split("_"); nm = "dm" + a.replace("-", "") + ("L" if b == "left" else "R") + ("One" if c == "0.01" else "Five")

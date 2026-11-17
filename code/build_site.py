@@ -200,7 +200,7 @@ Valued at mid-quotes it earns nothing, and a trader who buys at the ask and sell
 <p>Six models combine two volatility equations, GARCH and EGARCH, with three distributions for the daily shock: Normal, Student-<i>t</i>, and a skewed
 Student-<i>t</i> that lets one tail be heavier than the other. A seventh adds Poisson jumps. The choice of distribution matters far more than the choice of
 volatility equation. Tails are heavy, with {min(nus):.1f} to {max(nus):.1f} degrees of freedom, and the right tail is heavier than the left. The jump model agrees:
-{P3['post_up']} of the {P3['n_post50']} days it identifies as jumps are rises.</p>
+on {P3['post_up']} of the {P3['n_post50']} days it identifies as jump days, its estimate of the jump itself is upward.</p>
 {t_models}
 <p style="color:var(--ink2);font-size:0.9rem">A lower AIC is better. The preferred model is in bold.</p>
 {figure("fig3_qq", "Quantile-quantile plots of standardised residuals under Normal, Student-t and skewed-t distributions",

@@ -129,6 +129,12 @@ def run():
                            mid_t=tstat(c.at_mid), net=float(c.net.mean()), net_t=tstat(c.net), turnover=float(c.turn.mean()),
                            cost=float((c.turn * c.hs).mean()), half_spread=float(c.hs.mean()), mean_abs_r=float(d.r.abs().mean()),
                            ann_close=float(252 * c.at_close.mean()), ann_net=float(252 * c.net.mean()))
+    # same rule without look-ahead: signal from r_{t-2}, position opened at the close of t-1
+    c2 = pd.DataFrame({"r": df.r, "rmid": df.rmid, "pos": -np.sign(df.r.shift(2)), "hs": df.hs.shift(1)}).dropna()
+    c2["turn"] = (c2.pos - c2.pos.shift(1).fillna(0)).abs()
+    c2["at_close"] = c2.pos * c2.r; c2["at_mid"] = c2.pos * c2.rmid; c2["net"] = c2.at_mid - c2.turn * c2.hs
+    R["contrarian_lag"] = dict(n=int(len(c2)), close=float(c2.at_close.mean()), close_t=tstat(c2.at_close), mid=float(c2.at_mid.mean()),
+                               mid_t=tstat(c2.at_mid), net=float(c2.net.mean()), net_t=tstat(c2.net))
     return R, d, e
 
 

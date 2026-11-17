@@ -34,6 +34,9 @@
  "n_post90": 46,
  "post_up": 90,
  "post_down": 17,
+ "ret_up": 90,
+ "sign_agree": 107,
+ "p_jump_pos": 0.6485583459983267,
  "post_20240314": 1.0,
  "uncond_sd": 4.044528454782739,
  "oos": {
